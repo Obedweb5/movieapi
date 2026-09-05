@@ -1,0 +1,1 @@
+- [OpenAPI Zod compatibility](openapi-zod-version.md) — keep Orval output aligned with the workspace’s installed Zod major version.

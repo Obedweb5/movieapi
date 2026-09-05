@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: catalog
+    description: Public catalog metadata operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,93 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /titles:
+    get:
+      operationId: listTitles
+      tags: [catalog]
+      summary: List public movie and series metadata
+      parameters:
+        - in: query
+          name: query
+          schema:
+            type: string
+          description: Search titles and descriptions
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [movie, series]
+        - in: query
+          name: genre
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 24
+      responses:
+        "200":
+          description: Paginated catalog metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TitleListResponse"
+  /titles/{id}:
+    get:
+      operationId: getTitle
+      tags: [catalog]
+      summary: Get title metadata and episode listings
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Title metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TitleDetail"
+        "404":
+          description: Title not found
+  /catalog/import:
+    post:
+      operationId: importCatalogMetadata
+      tags: [catalog]
+      summary: Import public catalog metadata from an approved host
+      description: >
+        Fetches publicly accessible HTML and JSON-LD metadata only. It does not
+        inspect, store, proxy, or return playback URLs, download URLs, manifests,
+        session tokens, cookies, authorization headers, or other protected data.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogImportInput"
+      responses:
+        "200":
+          description: Import summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogImportResponse"
+        "400":
+          description: Invalid request or host not approved
+        "502":
+          description: Source could not be fetched
 components:
   schemas:
     HealthStatus:
@@ -33,4 +122,105 @@ components:
           type: string
       required:
         - status
+    TitleSummary:
+      type: object
+      required: [id, title, type, genres, sourceUrl, lastSyncedAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        type:
+          type: string
+          enum: [movie, series]
+        posterUrl:
+          type: ["string", "null"]
+          format: uri
+        synopsis:
+          type: ["string", "null"]
+        year:
+          type: ["integer", "null"]
+        genres:
+          type: array
+          items:
+            type: string
+        rating:
+          type: ["number", "null"]
+        sourceUrl:
+          type: string
+          format: uri
+        lastSyncedAt:
+          type: string
+          format: date-time
+    Episode:
+      type: object
+      required: [id, titleId, seasonNumber, episodeNumber, title, sourceUrl]
+      properties:
+        id:
+          type: integer
+        titleId:
+          type: integer
+        seasonNumber:
+          type: integer
+        episodeNumber:
+          type: integer
+        title:
+          type: string
+        synopsis:
+          type: ["string", "null"]
+        airDate:
+          type: ["string", "null"]
+          format: date
+        sourceUrl:
+          type: string
+          format: uri
+    TitleDetail:
+      allOf:
+        - $ref: "#/components/schemas/TitleSummary"
+        - type: object
+          required: [episodes]
+          properties:
+            episodes:
+              type: array
+              items:
+                $ref: "#/components/schemas/Episode"
+    TitleListResponse:
+      type: object
+      required: [items, page, pageSize, total, totalPages]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TitleSummary"
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+    CatalogImportInput:
+      type: object
+      required: [sourceUrl]
+      properties:
+        sourceUrl:
+          type: string
+          format: uri
+        maxPages:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 1
+    CatalogImportResponse:
+      type: object
+      required: [sourceUrl, imported, skipped]
+      properties:
+        sourceUrl:
+          type: string
+          format: uri
+        imported:
+          type: integer
+        skipped:
+          type: integer
 

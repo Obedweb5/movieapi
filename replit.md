@@ -1,6 +1,6 @@
-# [Project name]
+# Public Movie Metadata API
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A metadata-only catalog API for publicly accessible movie and series pages.
 
 ## Run & Operate
 
@@ -22,15 +22,22 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/api-spec/openapi.yaml` — source of truth for the catalog API contract
+- `lib/db/src/schema/catalog.ts` — PostgreSQL title and episode tables
+- `artifacts/api-server/src/lib/catalog-source.ts` — guarded public metadata parser
+- `artifacts/api-server/src/routes/catalog.ts` — catalog search, detail, and import routes
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The importer reads only HTML metadata and JSON-LD descriptive fields; it never handles playback or download resources.
+- Public-source fetching blocks local/private hosts, non-HTML responses, redirects, and suspicious streaming resource paths.
+- OpenAPI remains the source of truth; generated Zod schemas validate every catalog request and response.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Search and paginate movie/series metadata.
+- View title details and episode listings.
+- Import public metadata from an approved, same-host HTML catalog.
 
 ## User preferences
 
@@ -38,7 +45,8 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Set `CATALOG_ALLOWED_HOSTS` to restrict imports to a known public hostname.
+- Run `pnpm --filter @workspace/api-spec run codegen` after OpenAPI changes.
 
 ## Pointers
 
