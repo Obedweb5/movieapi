@@ -74,6 +74,106 @@ export interface CatalogImportResponse {
   skipped: number;
 }
 
+export type MediaAssetKind = typeof MediaAssetKind[keyof typeof MediaAssetKind];
+
+
+export const MediaAssetKind = {
+  manifest: 'manifest',
+  video: 'video',
+  download: 'download',
+  subtitle: 'subtitle',
+} as const;
+
+export interface MediaAsset {
+  id: number;
+  titleId: number;
+  /** @nullable */
+  episodeId?: number | null;
+  kind: MediaAssetKind;
+  label: string;
+  mimeType: string;
+  /** @nullable */
+  width?: number | null;
+  /** @nullable */
+  height?: number | null;
+  /** @nullable */
+  bitrateKbps?: number | null;
+  isDownloadable: boolean;
+}
+
+export type MediaAssetInputKind = typeof MediaAssetInputKind[keyof typeof MediaAssetInputKind];
+
+
+export const MediaAssetInputKind = {
+  manifest: 'manifest',
+  video: 'video',
+  download: 'download',
+  subtitle: 'subtitle',
+} as const;
+
+export interface MediaAssetInput {
+  /** @minimum 1 */
+  titleId: number;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  episodeId?: number | null;
+  kind: MediaAssetInputKind;
+  /**
+     * @minLength 1
+     * @maxLength 50
+     */
+  label: string;
+  /** @minLength 1 */
+  relativePath: string;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  mimeType: string;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  width?: number | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  height?: number | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  bitrateKbps?: number | null;
+  isDownloadable?: boolean;
+}
+
+export interface SignedAsset {
+  assetId: number;
+  label: string;
+  url: string;
+  mimeType: string;
+  /** @nullable */
+  width?: number | null;
+  /** @nullable */
+  height?: number | null;
+  /** @nullable */
+  bitrateKbps?: number | null;
+  expiresAt: string;
+}
+
+export interface PlaybackOptions {
+  titleId: number;
+  /** @nullable */
+  episodeId: number | null;
+  /** @nullable */
+  manifest: SignedAsset | null;
+  qualities: SignedAsset[];
+  downloads: SignedAsset[];
+}
+
 export type ListTitlesParams = {
 /**
  * Search titles and descriptions

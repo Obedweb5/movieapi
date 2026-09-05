@@ -25,6 +25,7 @@ A metadata-only catalog API for publicly accessible movie and series pages.
 - `lib/api-spec/openapi.yaml` — source of truth for the catalog API contract
 - `lib/db/src/schema/catalog.ts` — PostgreSQL title and episode tables
 - `artifacts/api-server/src/lib/catalog-source.ts` — guarded public metadata parser
+- `artifacts/api-server/src/lib/media-signing.ts` — expiring signatures and safe VPS file resolution
 - `artifacts/api-server/src/routes/catalog.ts` — catalog search, detail, and import routes
 
 ## Architecture decisions
@@ -32,12 +33,14 @@ A metadata-only catalog API for publicly accessible movie and series pages.
 - The importer reads only HTML metadata and JSON-LD descriptive fields; it never handles playback or download resources.
 - Public-source fetching blocks local/private hosts, non-HTML responses, redirects, and suspicious streaming resource paths.
 - OpenAPI remains the source of truth; generated Zod schemas validate every catalog request and response.
+- Owned media is served only from `MEDIA_LIBRARY_ROOT` through expiring HMAC-signed URLs with byte-range support.
 
 ## Product
 
 - Search and paginate movie/series metadata.
 - View title details and episode listings.
 - Import public metadata from an approved, same-host HTML catalog.
+- Register owned media files and expose quality, manifest, episode, subtitle, and download metadata through signed URLs.
 
 ## User preferences
 
@@ -46,6 +49,7 @@ _Populate as you build — explicit user instructions worth remembering across s
 ## Gotchas
 
 - Set `CATALOG_ALLOWED_HOSTS` to restrict imports to a known public hostname.
+- Set `MEDIA_LIBRARY_ROOT`, `MEDIA_ADMIN_KEY`, and `MEDIA_SIGNING_SECRET` before registering local media.
 - Run `pnpm --filter @workspace/api-spec run codegen` after OpenAPI changes.
 
 ## Pointers

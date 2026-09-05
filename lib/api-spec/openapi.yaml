@@ -87,6 +87,103 @@ paths:
                 $ref: "#/components/schemas/TitleDetail"
         "404":
           description: Title not found
+  /titles/{id}/playback:
+    get:
+      operationId: getPlaybackOptions
+      tags: [catalog]
+      summary: Get signed playback and download options for owned media
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Signed local media options
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaybackOptions"
+        "404":
+          description: Title or media assets not found
+  /episodes/{episodeId}/playback:
+    get:
+      operationId: getEpisodePlaybackOptions
+      tags: [catalog]
+      summary: Get signed playback and download options for an owned episode
+      parameters:
+        - in: path
+          name: episodeId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Signed local media options
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaybackOptions"
+        "404":
+          description: Episode or media assets not found
+  /media/assets/{assetId}/{token}:
+    get:
+      operationId: serveMediaAsset
+      tags: [catalog]
+      summary: Serve a signed owned media asset
+      parameters:
+        - in: path
+          name: assetId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Media content
+        "206":
+          description: Partial media content
+        "401":
+          description: Invalid or expired signature
+        "404":
+          description: Media asset not found
+  /admin/media-assets:
+    post:
+      operationId: registerMediaAsset
+      tags: [catalog]
+      summary: Register a local owned-media file
+      parameters:
+        - in: header
+          name: x-media-admin-key
+          required: true
+          schema:
+            type: string
+          description: Server-side MEDIA_ADMIN_KEY value
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MediaAssetInput"
+      responses:
+        "201":
+          description: Registered media asset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaAsset"
+        "400":
+          description: Invalid asset
+        "401":
+          description: Invalid admin key
   /catalog/import:
     post:
       operationId: importCatalogMetadata
@@ -223,4 +320,106 @@ components:
           type: integer
         skipped:
           type: integer
+    MediaAsset:
+      type: object
+      required: [id, titleId, kind, label, mimeType, isDownloadable]
+      properties:
+        id:
+          type: integer
+        titleId:
+          type: integer
+        episodeId:
+          type: ["integer", "null"]
+        kind:
+          type: string
+          enum: [manifest, video, download, subtitle]
+        label:
+          type: string
+        mimeType:
+          type: string
+        width:
+          type: ["integer", "null"]
+        height:
+          type: ["integer", "null"]
+        bitrateKbps:
+          type: ["integer", "null"]
+        isDownloadable:
+          type: boolean
+    MediaAssetInput:
+      type: object
+      required: [titleId, kind, label, relativePath, mimeType]
+      properties:
+        titleId:
+          type: integer
+          minimum: 1
+        episodeId:
+          type: ["integer", "null"]
+          minimum: 1
+        kind:
+          type: string
+          enum: [manifest, video, download, subtitle]
+        label:
+          type: string
+          minLength: 1
+          maxLength: 50
+        relativePath:
+          type: string
+          minLength: 1
+        mimeType:
+          type: string
+          minLength: 1
+          maxLength: 120
+        width:
+          type: ["integer", "null"]
+          minimum: 1
+        height:
+          type: ["integer", "null"]
+          minimum: 1
+        bitrateKbps:
+          type: ["integer", "null"]
+          minimum: 1
+        isDownloadable:
+          type: boolean
+          default: false
+    SignedAsset:
+      type: object
+      required: [assetId, label, url, mimeType, expiresAt]
+      properties:
+        assetId:
+          type: integer
+        label:
+          type: string
+        url:
+          type: string
+        mimeType:
+          type: string
+        width:
+          type: ["integer", "null"]
+        height:
+          type: ["integer", "null"]
+        bitrateKbps:
+          type: ["integer", "null"]
+        expiresAt:
+          type: string
+          format: date-time
+    PlaybackOptions:
+      type: object
+      required: [titleId, episodeId, manifest, qualities, downloads]
+      properties:
+        titleId:
+          type: integer
+        episodeId:
+          type: ["integer", "null"]
+        manifest:
+          type: ["object", "null"]
+          allOf:
+            - $ref: "#/components/schemas/SignedAsset"
+        qualities:
+          type: array
+          items:
+            $ref: "#/components/schemas/SignedAsset"
+        downloads:
+          type: array
+          items:
+            $ref: "#/components/schemas/SignedAsset"
 

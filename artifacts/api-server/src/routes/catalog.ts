@@ -1,21 +1,79 @@
-import { and, desc, eq, ilike, or } from "drizzle-orm";
+import { createReadStream } from "node:fs";
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import { and, desc, eq, ilike, isNull, or } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import {
+  GetEpisodePlaybackOptionsParams,
+  GetEpisodePlaybackOptionsResponse,
+  GetPlaybackOptionsParams,
+  GetPlaybackOptionsResponse,
   GetTitleParams,
   GetTitleResponse,
   ImportCatalogMetadataBody,
   ImportCatalogMetadataResponse,
   ListTitlesQueryParams,
   ListTitlesResponse,
+  RegisterMediaAssetBody,
+  RegisterMediaAssetHeader,
+  RegisterMediaAssetResponse,
+  ServeMediaAssetParams,
 } from "@workspace/api-zod";
 import {
   catalogEpisodesTable,
   catalogTitlesTable,
   db,
+  mediaAssetsTable,
 } from "@workspace/db";
 import { scrapePublicCatalog } from "../lib/catalog-source";
+import {
+  publicMediaAsset,
+  resolveMediaPath,
+  signedMediaAsset,
+  verifyMediaToken,
+} from "../lib/media-signing";
 
 const router: IRouter = Router();
+
+function rewriteHlsManifest(
+  content: string,
+  currentRelativePath: string,
+  assetId: number,
+  token: string,
+): string {
+  const currentDirectory = path.posix.dirname(
+    currentRelativePath.replaceAll("\\", "/"),
+  );
+  return content
+    .split(/\r?\n/)
+    .map((line) => {
+      const trimmed = line.trim();
+      if (
+        !trimmed ||
+        trimmed.startsWith("#") ||
+        trimmed.startsWith("http://") ||
+        trimmed.startsWith("https://") ||
+        trimmed.startsWith("data:")
+      ) {
+        return line;
+      }
+
+      const [resource, query = ""] = trimmed.split("?", 2);
+      const childPath = path.posix.normalize(
+        path.posix.join(currentDirectory, resource),
+      );
+      const encodedPath = childPath
+        .split("/")
+        .filter(Boolean)
+        .map((part) => encodeURIComponent(part))
+        .join("/");
+      const childUrl = `/api/media/hls/${assetId}/${token}/${encodedPath}${
+        query ? `?${query}` : ""
+      }`;
+      return line.replace(trimmed, childUrl);
+    })
+    .join("\n");
+}
 
 function toTitleResponse(title: typeof catalogTitlesTable.$inferSelect) {
   return {
@@ -96,6 +154,342 @@ router.get("/titles/:id", async (req, res): Promise<void> => {
     }),
   );
 });
+
+async function playbackOptions(
+  titleId: number,
+  episodeId: number | null,
+  basePath: string,
+) {
+  const assets = await db
+    .select()
+    .from(mediaAssetsTable)
+    .where(
+      and(
+        eq(mediaAssetsTable.titleId, titleId),
+        episodeId === null
+          ? isNull(mediaAssetsTable.episodeId)
+          : eq(mediaAssetsTable.episodeId, episodeId),
+      ),
+    )
+    .orderBy(mediaAssetsTable.height, mediaAssetsTable.bitrateKbps);
+  const manifestAsset = assets.find((asset) => asset.kind === "manifest");
+
+  return {
+    titleId,
+    episodeId,
+    manifest: manifestAsset
+      ? signedMediaAsset(manifestAsset, basePath)
+      : null,
+    qualities: assets
+      .filter((asset) => asset.kind === "video")
+      .map((asset) => signedMediaAsset(asset, basePath)),
+    downloads: assets
+      .filter((asset) => asset.kind === "download" && asset.isDownloadable)
+      .map((asset) => signedMediaAsset(asset, basePath)),
+    assets,
+  };
+}
+
+router.get("/titles/:id/playback", async (req, res): Promise<void> => {
+  const parsed = GetPlaybackOptionsParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [title] = await db
+    .select({ id: catalogTitlesTable.id })
+    .from(catalogTitlesTable)
+    .where(eq(catalogTitlesTable.id, parsed.data.id))
+    .limit(1);
+  if (!title) {
+    res.status(404).json({ error: "Title not found" });
+    return;
+  }
+
+  const options = await playbackOptions(title.id, null, "/api");
+  if (options.assets.length === 0) {
+    res.status(404).json({ error: "No media assets registered for this title" });
+    return;
+  }
+  res.json(
+    GetPlaybackOptionsResponse.parse({
+      titleId: options.titleId,
+      episodeId: options.episodeId,
+      manifest: options.manifest,
+      qualities: options.qualities,
+      downloads: options.downloads,
+    }),
+  );
+});
+
+router.get("/episodes/:episodeId/playback", async (req, res): Promise<void> => {
+  const parsed = GetEpisodePlaybackOptionsParams.safeParse(req.params);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [episode] = await db
+    .select({
+      id: catalogEpisodesTable.id,
+      titleId: catalogEpisodesTable.titleId,
+    })
+    .from(catalogEpisodesTable)
+    .where(eq(catalogEpisodesTable.id, parsed.data.episodeId))
+    .limit(1);
+  if (!episode) {
+    res.status(404).json({ error: "Episode not found" });
+    return;
+  }
+
+  const options = await playbackOptions(episode.titleId, episode.id, "/api");
+  if (options.assets.length === 0) {
+    res.status(404).json({ error: "No media assets registered for this episode" });
+    return;
+  }
+  res.json(
+    GetEpisodePlaybackOptionsResponse.parse({
+      titleId: options.titleId,
+      episodeId: options.episodeId,
+      manifest: options.manifest,
+      qualities: options.qualities,
+      downloads: options.downloads,
+    }),
+  );
+});
+
+router.post("/admin/media-assets", async (req, res): Promise<void> => {
+  const expectedAdminKey = process.env.MEDIA_ADMIN_KEY;
+  const header = RegisterMediaAssetHeader.safeParse({
+    "x-media-admin-key": req.get("x-media-admin-key"),
+  });
+  if (!expectedAdminKey || !header.success || header.data["x-media-admin-key"] !== expectedAdminKey) {
+    res.status(401).json({ error: "Invalid media admin key" });
+    return;
+  }
+
+  const parsed = RegisterMediaAssetBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  try {
+    const filePath = resolveMediaPath(parsed.data.relativePath);
+    await fs.stat(filePath);
+
+    const [title] = await db
+      .select({ id: catalogTitlesTable.id })
+      .from(catalogTitlesTable)
+      .where(eq(catalogTitlesTable.id, parsed.data.titleId))
+      .limit(1);
+    if (!title) {
+      res.status(400).json({ error: "Title not found" });
+      return;
+    }
+
+    if (parsed.data.episodeId !== null && parsed.data.episodeId !== undefined) {
+      const [episode] = await db
+        .select({ id: catalogEpisodesTable.id, titleId: catalogEpisodesTable.titleId })
+        .from(catalogEpisodesTable)
+        .where(eq(catalogEpisodesTable.id, parsed.data.episodeId))
+        .limit(1);
+      if (!episode || episode.titleId !== title.id) {
+        res.status(400).json({ error: "Episode does not belong to title" });
+        return;
+      }
+    }
+
+    const [asset] = await db
+      .insert(mediaAssetsTable)
+      .values({
+        titleId: parsed.data.titleId,
+        episodeId: parsed.data.episodeId ?? null,
+        kind: parsed.data.kind,
+        label: parsed.data.label,
+        relativePath: parsed.data.relativePath,
+        mimeType: parsed.data.mimeType,
+        width: parsed.data.width ?? null,
+        height: parsed.data.height ?? null,
+        bitrateKbps: parsed.data.bitrateKbps ?? null,
+        isDownloadable: parsed.data.isDownloadable,
+      })
+      .onConflictDoUpdate({
+        target: [
+          mediaAssetsTable.titleId,
+          mediaAssetsTable.episodeId,
+          mediaAssetsTable.kind,
+          mediaAssetsTable.label,
+        ],
+        set: {
+          relativePath: parsed.data.relativePath,
+          mimeType: parsed.data.mimeType,
+          width: parsed.data.width ?? null,
+          height: parsed.data.height ?? null,
+          bitrateKbps: parsed.data.bitrateKbps ?? null,
+          isDownloadable: parsed.data.isDownloadable,
+        },
+      })
+      .returning();
+    if (!asset) {
+      res.status(400).json({ error: "Unable to register media asset" });
+      return;
+    }
+    res.status(201).json(RegisterMediaAssetResponse.parse(publicMediaAsset(asset)));
+  } catch (error) {
+    req.log.warn({ err: error }, "Media asset registration failed");
+    res.status(400).json({
+      error: error instanceof Error ? error.message : "Media asset is not readable",
+    });
+  }
+});
+
+router.get("/media/assets/:assetId/:token", async (req, res): Promise<void> => {
+  const parsed = ServeMediaAssetParams.safeParse(req.params);
+  if (!parsed.success || !verifyMediaToken(parsed.data.token, parsed.data.assetId)) {
+    res.status(401).json({ error: "Invalid or expired media token" });
+    return;
+  }
+
+  const [asset] = await db
+    .select()
+    .from(mediaAssetsTable)
+    .where(eq(mediaAssetsTable.id, parsed.data.assetId))
+    .limit(1);
+  if (!asset) {
+    res.status(404).json({ error: "Media asset not found" });
+    return;
+  }
+
+  try {
+    const filePath = resolveMediaPath(asset.relativePath);
+    const stats = await fs.stat(filePath);
+    const range = req.headers.range;
+    let start = 0;
+    let end = stats.size - 1;
+    let statusCode = 200;
+
+    if (range) {
+      const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+      if (!match) {
+        res.status(416).set("Content-Range", `bytes */${stats.size}`).end();
+        return;
+      }
+      start = match[1] ? Number(match[1]) : Math.max(0, stats.size - Number(match[2]) || 0);
+      end = match[2] ? Number(match[2]) : end;
+      if (start > end || start >= stats.size) {
+        res.status(416).set("Content-Range", `bytes */${stats.size}`).end();
+        return;
+      }
+      end = Math.min(end, stats.size - 1);
+      statusCode = 206;
+    }
+
+    res.status(statusCode);
+    res.set({
+      "Accept-Ranges": "bytes",
+      "Content-Type": asset.mimeType,
+      "Content-Length": String(end - start + 1),
+      ...(statusCode === 206
+        ? { "Content-Range": `bytes ${start}-${end}/${stats.size}` }
+        : {}),
+      ...(req.query.download === "1" && asset.isDownloadable
+        ? { "Content-Disposition": `attachment; filename="${asset.label}"` }
+        : {}),
+    });
+    if (
+      asset.kind === "manifest" &&
+      (asset.mimeType.includes("mpegurl") || asset.relativePath.endsWith(".m3u8"))
+    ) {
+      const content = await fs.readFile(filePath, "utf8");
+      res
+        .status(200)
+        .set("Content-Type", "application/vnd.apple.mpegurl")
+        .send(rewriteHlsManifest(content, asset.relativePath, asset.id, parsed.data.token));
+      return;
+    }
+    createReadStream(filePath, { start, end }).pipe(res);
+  } catch (error) {
+    req.log.warn({ err: error, assetId: asset.id }, "Media asset serving failed");
+    res.status(404).json({ error: "Media asset file not found" });
+  }
+});
+
+router.get(
+  "/media/hls/:assetId/:token/{*segment}",
+  async (req, res): Promise<void> => {
+    const parsed = ServeMediaAssetParams.safeParse(req.params);
+    if (!parsed.success || !verifyMediaToken(parsed.data.token, parsed.data.assetId)) {
+      res.status(401).json({ error: "Invalid or expired media token" });
+      return;
+    }
+
+    const [manifest] = await db
+      .select()
+      .from(mediaAssetsTable)
+      .where(eq(mediaAssetsTable.id, parsed.data.assetId))
+      .limit(1);
+    if (!manifest || manifest.kind !== "manifest") {
+      res.status(404).json({ error: "HLS manifest not found" });
+      return;
+    }
+
+    const segment = Array.isArray(req.params.segment)
+      ? req.params.segment.join("/")
+      : req.params.segment;
+    if (!segment) {
+      res.status(400).json({ error: "HLS child path is required" });
+      return;
+    }
+
+    try {
+      const manifestPath = resolveMediaPath(manifest.relativePath);
+      const manifestDirectory = path.dirname(manifestPath);
+      const targetPath = resolveMediaPath(
+        path.posix.join(path.posix.dirname(manifest.relativePath), segment),
+      );
+      const relativeToManifest = path.relative(manifestDirectory, targetPath);
+      if (
+        relativeToManifest.startsWith("..") ||
+        path.isAbsolute(relativeToManifest)
+      ) {
+        res.status(404).json({ error: "HLS child path is outside manifest directory" });
+        return;
+      }
+
+      const stats = await fs.stat(targetPath);
+      if (targetPath.endsWith(".m3u8")) {
+        const content = await fs.readFile(targetPath, "utf8");
+        const relativeTarget = path.relative(
+          path.dirname(resolveMediaPath(manifest.relativePath)),
+          targetPath,
+        );
+        res
+          .status(200)
+          .set("Content-Type", "application/vnd.apple.mpegurl")
+          .send(
+            rewriteHlsManifest(
+              content,
+              relativeTarget,
+              manifest.id,
+              parsed.data.token,
+            ),
+          );
+        return;
+      }
+
+      res.set({
+        "Content-Length": String(stats.size),
+        "Cache-Control": "public, max-age=3600",
+      });
+      res.sendFile(targetPath);
+    } catch (error) {
+      req.log.warn({ err: error, assetId: manifest.id }, "HLS child serving failed");
+      res.status(404).json({ error: "HLS child file not found" });
+    }
+  },
+);
 
 router.post("/catalog/import", async (req, res): Promise<void> => {
   const parsed = ImportCatalogMetadataBody.safeParse(req.body);

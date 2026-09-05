@@ -24,6 +24,9 @@ import type {
   CatalogImportResponse,
   HealthStatus,
   ListTitlesParams,
+  MediaAsset,
+  MediaAssetInput,
+  PlaybackOptions,
   TitleDetail,
   TitleListResponse
 } from './api.schemas';
@@ -293,6 +296,313 @@ export function useGetTitle<TData = Awaited<ReturnType<typeof getTitle>>, TError
 
 
 
+
+export const getGetPlaybackOptionsUrl = (id: number,) => {
+
+
+
+
+  return `/api/titles/${id}/playback`
+}
+
+/**
+ * @summary Get signed playback and download options for owned media
+ */
+export const getPlaybackOptions = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<PlaybackOptions> => {
+
+  return customFetch<PlaybackOptions>(getGetPlaybackOptionsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlaybackOptionsQueryKey = (id: number,) => {
+    return [
+    `/api/titles/${id}/playback`
+    ] as const;
+    }
+
+
+export const getGetPlaybackOptionsQueryOptions = <TData = Awaited<ReturnType<typeof getPlaybackOptions>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlaybackOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlaybackOptionsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlaybackOptions>>> = ({ signal }) => getPlaybackOptions(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlaybackOptions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlaybackOptionsQueryResult = NonNullable<Awaited<ReturnType<typeof getPlaybackOptions>>>
+export type GetPlaybackOptionsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get signed playback and download options for owned media
+ */
+
+export function useGetPlaybackOptions<TData = Awaited<ReturnType<typeof getPlaybackOptions>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlaybackOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlaybackOptionsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetEpisodePlaybackOptionsUrl = (episodeId: number,) => {
+
+
+
+
+  return `/api/episodes/${episodeId}/playback`
+}
+
+/**
+ * @summary Get signed playback and download options for an owned episode
+ */
+export const getEpisodePlaybackOptions = async (episodeId: number, options?: Parameters<typeof customFetch>[1]): Promise<PlaybackOptions> => {
+
+  return customFetch<PlaybackOptions>(getGetEpisodePlaybackOptionsUrl(episodeId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEpisodePlaybackOptionsQueryKey = (episodeId: number,) => {
+    return [
+    `/api/episodes/${episodeId}/playback`
+    ] as const;
+    }
+
+
+export const getGetEpisodePlaybackOptionsQueryOptions = <TData = Awaited<ReturnType<typeof getEpisodePlaybackOptions>>, TError = ErrorType<void>>(episodeId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEpisodePlaybackOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEpisodePlaybackOptionsQueryKey(episodeId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEpisodePlaybackOptions>>> = ({ signal }) => getEpisodePlaybackOptions(episodeId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: episodeId !== null && episodeId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEpisodePlaybackOptions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEpisodePlaybackOptionsQueryResult = NonNullable<Awaited<ReturnType<typeof getEpisodePlaybackOptions>>>
+export type GetEpisodePlaybackOptionsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get signed playback and download options for an owned episode
+ */
+
+export function useGetEpisodePlaybackOptions<TData = Awaited<ReturnType<typeof getEpisodePlaybackOptions>>, TError = ErrorType<void>>(
+ episodeId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEpisodePlaybackOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEpisodePlaybackOptionsQueryOptions(episodeId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getServeMediaAssetUrl = (assetId: number,
+    token: string,) => {
+
+
+
+
+  return `/api/media/assets/${assetId}/${token}`
+}
+
+/**
+ * @summary Serve a signed owned media asset
+ */
+export const serveMediaAsset = async (assetId: number,
+    token: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getServeMediaAssetUrl(assetId,token),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getServeMediaAssetQueryKey = (assetId: number,
+    token: string,) => {
+    return [
+    `/api/media/assets/${assetId}/${token}`
+    ] as const;
+    }
+
+
+export const getServeMediaAssetQueryOptions = <TData = Awaited<ReturnType<typeof serveMediaAsset>>, TError = ErrorType<void>>(assetId: number,
+    token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof serveMediaAsset>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getServeMediaAssetQueryKey(assetId,token);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof serveMediaAsset>>> = ({ signal }) => serveMediaAsset(assetId,token, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: assetId !== null && assetId !== undefined && token !== null && token !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof serveMediaAsset>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ServeMediaAssetQueryResult = NonNullable<Awaited<ReturnType<typeof serveMediaAsset>>>
+export type ServeMediaAssetQueryError = ErrorType<void>
+
+
+/**
+ * @summary Serve a signed owned media asset
+ */
+
+export function useServeMediaAsset<TData = Awaited<ReturnType<typeof serveMediaAsset>>, TError = ErrorType<void>>(
+ assetId: number,
+    token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof serveMediaAsset>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getServeMediaAssetQueryOptions(assetId,token,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRegisterMediaAssetUrl = () => {
+
+
+
+
+  return `/api/admin/media-assets`
+}
+
+/**
+ * @summary Register a local owned-media file
+ */
+export const registerMediaAsset = async (mediaAssetInput: MediaAssetInput, options?: Parameters<typeof customFetch>[1]): Promise<MediaAsset> => {
+
+  return customFetch<MediaAsset>(getRegisterMediaAssetUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(mediaAssetInput)
+  }
+);}
+
+
+
+
+
+export const getRegisterMediaAssetMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerMediaAsset>>, TError,{data: BodyType<MediaAssetInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof registerMediaAsset>>, TError,{data: BodyType<MediaAssetInput>}, TContext> => {
+
+const mutationKey = ['registerMediaAsset'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof registerMediaAsset>>, {data: BodyType<MediaAssetInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  registerMediaAsset(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegisterMediaAssetMutationResult = NonNullable<Awaited<ReturnType<typeof registerMediaAsset>>>
+    export type RegisterMediaAssetMutationBody = BodyType<MediaAssetInput>
+    export type RegisterMediaAssetMutationError = ErrorType<void>
+
+    /**
+ * @summary Register a local owned-media file
+ */
+export const useRegisterMediaAsset = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerMediaAsset>>, TError,{data: BodyType<MediaAssetInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof registerMediaAsset>>,
+        TError,
+        {data: BodyType<MediaAssetInput>},
+        TContext
+      > => {
+      return useMutation(getRegisterMediaAssetMutationOptions(options));
+    }
 
 export const getImportCatalogMetadataUrl = () => {
 

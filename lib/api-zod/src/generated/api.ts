@@ -91,6 +91,158 @@ export const GetTitleResponse = zod.object({
 
 
 /**
+ * @summary Get signed playback and download options for owned media
+ */
+
+
+
+export const GetPlaybackOptionsParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const GetPlaybackOptionsResponse = zod.object({
+  "titleId": zod.number().int(),
+  "episodeId": zod.number().int().nullable(),
+  "manifest": zod.object({
+  "assetId": zod.number().int(),
+  "label": zod.string(),
+  "url": zod.string(),
+  "mimeType": zod.string(),
+  "width": zod.number().int().nullish(),
+  "height": zod.number().int().nullish(),
+  "bitrateKbps": zod.number().int().nullish(),
+  "expiresAt": zod.coerce.date()
+}).nullable(),
+  "qualities": zod.array(zod.object({
+  "assetId": zod.number().int(),
+  "label": zod.string(),
+  "url": zod.string(),
+  "mimeType": zod.string(),
+  "width": zod.number().int().nullish(),
+  "height": zod.number().int().nullish(),
+  "bitrateKbps": zod.number().int().nullish(),
+  "expiresAt": zod.coerce.date()
+})),
+  "downloads": zod.array(zod.object({
+  "assetId": zod.number().int(),
+  "label": zod.string(),
+  "url": zod.string(),
+  "mimeType": zod.string(),
+  "width": zod.number().int().nullish(),
+  "height": zod.number().int().nullish(),
+  "bitrateKbps": zod.number().int().nullish(),
+  "expiresAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Get signed playback and download options for an owned episode
+ */
+
+
+
+export const GetEpisodePlaybackOptionsParams = zod.object({
+  "episodeId": zod.coerce.number().int().min(1)
+})
+
+export const GetEpisodePlaybackOptionsResponse = zod.object({
+  "titleId": zod.number().int(),
+  "episodeId": zod.number().int().nullable(),
+  "manifest": zod.object({
+  "assetId": zod.number().int(),
+  "label": zod.string(),
+  "url": zod.string(),
+  "mimeType": zod.string(),
+  "width": zod.number().int().nullish(),
+  "height": zod.number().int().nullish(),
+  "bitrateKbps": zod.number().int().nullish(),
+  "expiresAt": zod.coerce.date()
+}).nullable(),
+  "qualities": zod.array(zod.object({
+  "assetId": zod.number().int(),
+  "label": zod.string(),
+  "url": zod.string(),
+  "mimeType": zod.string(),
+  "width": zod.number().int().nullish(),
+  "height": zod.number().int().nullish(),
+  "bitrateKbps": zod.number().int().nullish(),
+  "expiresAt": zod.coerce.date()
+})),
+  "downloads": zod.array(zod.object({
+  "assetId": zod.number().int(),
+  "label": zod.string(),
+  "url": zod.string(),
+  "mimeType": zod.string(),
+  "width": zod.number().int().nullish(),
+  "height": zod.number().int().nullish(),
+  "bitrateKbps": zod.number().int().nullish(),
+  "expiresAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Serve a signed owned media asset
+ */
+
+
+
+export const ServeMediaAssetParams = zod.object({
+  "assetId": zod.coerce.number().int().min(1),
+  "token": zod.coerce.string()
+})
+
+export const ServeMediaAssetResponse = zod.unknown()
+
+
+/**
+ * @summary Register a local owned-media file
+ */
+export const RegisterMediaAssetHeader = zod.object({
+  "x-media-admin-key": zod.string().describe('Server-side MEDIA_ADMIN_KEY value')
+})
+
+
+
+export const registerMediaAssetBodyLabelMax = 50;
+
+
+export const registerMediaAssetBodyMimeTypeMax = 120;
+
+
+
+
+export const registerMediaAssetBodyIsDownloadableDefault = false;
+
+export const RegisterMediaAssetBody = zod.object({
+  "titleId": zod.number().int().min(1),
+  "episodeId": zod.number().int().min(1).nullish(),
+  "kind": zod.enum(['manifest', 'video', 'download', 'subtitle']),
+  "label": zod.string().min(1).max(registerMediaAssetBodyLabelMax),
+  "relativePath": zod.string().min(1),
+  "mimeType": zod.string().min(1).max(registerMediaAssetBodyMimeTypeMax),
+  "width": zod.number().int().min(1).nullish(),
+  "height": zod.number().int().min(1).nullish(),
+  "bitrateKbps": zod.number().int().min(1).nullish(),
+  "isDownloadable": zod.boolean().default(registerMediaAssetBodyIsDownloadableDefault)
+})
+
+export const RegisterMediaAssetResponse = zod.object({
+  "id": zod.number().int(),
+  "titleId": zod.number().int(),
+  "episodeId": zod.number().int().nullish(),
+  "kind": zod.enum(['manifest', 'video', 'download', 'subtitle']),
+  "label": zod.string(),
+  "mimeType": zod.string(),
+  "width": zod.number().int().nullish(),
+  "height": zod.number().int().nullish(),
+  "bitrateKbps": zod.number().int().nullish(),
+  "isDownloadable": zod.boolean()
+})
+
+
+/**
  * Fetches publicly accessible HTML and JSON-LD metadata only. It does not inspect, store, proxy, or return playback URLs, download URLs, manifests, session tokens, cookies, authorization headers, or other protected data.
  * @summary Import public catalog metadata from an approved host
  */

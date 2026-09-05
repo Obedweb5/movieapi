@@ -3,6 +3,7 @@ import {
   integer,
   numeric,
   serial,
+  boolean,
   text,
   timestamp,
   uniqueIndex,
@@ -52,6 +53,38 @@ export const catalogEpisodesTable = pgTable(
       table.titleId,
       table.seasonNumber,
       table.episodeNumber,
+    ),
+  }),
+);
+
+export const mediaAssetsTable = pgTable(
+  "media_assets",
+  {
+    id: serial("id").primaryKey(),
+    titleId: integer("title_id")
+      .notNull()
+      .references(() => catalogTitlesTable.id, { onDelete: "cascade" }),
+    episodeId: integer("episode_id").references(() => catalogEpisodesTable.id, {
+      onDelete: "cascade",
+    }),
+    kind: varchar("kind", { length: 20 }).notNull(),
+    label: varchar("label", { length: 50 }).notNull(),
+    relativePath: text("relative_path").notNull(),
+    mimeType: varchar("mime_type", { length: 120 }).notNull(),
+    width: integer("width"),
+    height: integer("height"),
+    bitrateKbps: integer("bitrate_kbps"),
+    isDownloadable: boolean("is_downloadable").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    assetIdentityIndex: uniqueIndex("media_assets_identity_idx").on(
+      table.titleId,
+      table.episodeId,
+      table.kind,
+      table.label,
     ),
   }),
 );
