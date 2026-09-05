@@ -184,6 +184,64 @@ paths:
           description: Invalid asset
         "401":
           description: Invalid admin key
+  /admin/media-ingestions:
+    post:
+      operationId: createMediaIngestion
+      tags: [catalog]
+      summary: Queue local video transcoding
+      parameters:
+        - in: header
+          name: x-media-admin-key
+          required: true
+          schema:
+            type: string
+          description: Server-side MEDIA_ADMIN_KEY value
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MediaIngestionInput"
+      responses:
+        "202":
+          description: Queued media ingestion job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaIngestionJob"
+        "400":
+          description: Invalid source, title, episode, or quality configuration
+        "401":
+          description: Invalid admin key
+  /admin/media-ingestions/{jobId}:
+    get:
+      operationId: getMediaIngestion
+      tags: [catalog]
+      summary: Get video transcoding job status
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: header
+          name: x-media-admin-key
+          required: true
+          schema:
+            type: string
+          description: Server-side MEDIA_ADMIN_KEY value
+      responses:
+        "200":
+          description: Media ingestion job status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaIngestionJob"
+        "401":
+          description: Invalid admin key
+        "404":
+          description: Job not found
   /catalog/import:
     post:
       operationId: importCatalogMetadata
@@ -337,6 +395,9 @@ components:
           type: string
         mimeType:
           type: string
+        language:
+          type: ["string", "null"]
+          pattern: '^[a-z]{2,3}(?:-[A-Z]{2})?$'
         width:
           type: ["integer", "null"]
         height:
@@ -369,6 +430,9 @@ components:
           type: string
           minLength: 1
           maxLength: 120
+        language:
+          type: ["string", "null"]
+          pattern: '^[a-z]{2,3}(?:-[A-Z]{2})?$'
         width:
           type: ["integer", "null"]
           minimum: 1
@@ -381,6 +445,105 @@ components:
         isDownloadable:
           type: boolean
           default: false
+    MediaIngestionQuality:
+      type: object
+      required: [label, height, bitrateKbps]
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 50
+        height:
+          type: integer
+          minimum: 144
+          maximum: 4320
+        bitrateKbps:
+          type: integer
+          minimum: 100
+          maximum: 50000
+    MediaIngestionSubtitle:
+      type: object
+      required: [relativePath, label]
+      properties:
+        relativePath:
+          type: string
+          minLength: 1
+        label:
+          type: string
+          minLength: 1
+          maxLength: 50
+        language:
+          type: string
+          pattern: '^[a-z]{2,3}(?:-[A-Z]{2})?$'
+    MediaIngestionInput:
+      type: object
+      required: [titleId, sourceRelativePath]
+      properties:
+        titleId:
+          type: integer
+          minimum: 1
+        episodeId:
+          type: ["integer", "null"]
+          minimum: 1
+        sourceRelativePath:
+          type: string
+          minLength: 1
+        qualities:
+          type: array
+          minItems: 1
+          maxItems: 8
+          items:
+            $ref: "#/components/schemas/MediaIngestionQuality"
+        subtitles:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/MediaIngestionSubtitle"
+        includeDownloads:
+          type: boolean
+          default: true
+    MediaIngestionJob:
+      type: object
+      required:
+        [id, titleId, sourceRelativePath, status, progress, qualities, subtitles,
+         includeDownloads, createdAt]
+      properties:
+        id:
+          type: integer
+        titleId:
+          type: integer
+        episodeId:
+          type: ["integer", "null"]
+        sourceRelativePath:
+          type: string
+        status:
+          type: string
+          enum: [queued, processing, completed, failed]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        qualities:
+          type: array
+          items:
+            $ref: "#/components/schemas/MediaIngestionQuality"
+        subtitles:
+          type: array
+          items:
+            $ref: "#/components/schemas/MediaIngestionSubtitle"
+        includeDownloads:
+          type: boolean
+        error:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: ["string", "null"]
+          format: date-time
+        completedAt:
+          type: ["string", "null"]
+          format: date-time
     SignedAsset:
       type: object
       required: [assetId, label, url, mimeType, expiresAt]
@@ -393,6 +556,9 @@ components:
           type: string
         mimeType:
           type: string
+        language:
+          type: ["string", "null"]
+          pattern: '^[a-z]{2,3}(?:-[A-Z]{2})?$'
         width:
           type: ["integer", "null"]
         height:
@@ -404,7 +570,7 @@ components:
           format: date-time
     PlaybackOptions:
       type: object
-      required: [titleId, episodeId, manifest, qualities, downloads]
+      required: [titleId, episodeId, manifest, qualities, downloads, subtitles]
       properties:
         titleId:
           type: integer
@@ -419,6 +585,10 @@ components:
           items:
             $ref: "#/components/schemas/SignedAsset"
         downloads:
+          type: array
+          items:
+            $ref: "#/components/schemas/SignedAsset"
+        subtitles:
           type: array
           items:
             $ref: "#/components/schemas/SignedAsset"

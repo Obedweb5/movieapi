@@ -26,6 +26,8 @@ import type {
   ListTitlesParams,
   MediaAsset,
   MediaAssetInput,
+  MediaIngestionInput,
+  MediaIngestionJob,
   PlaybackOptions,
   TitleDetail,
   TitleListResponse
@@ -603,6 +605,154 @@ export const useRegisterMediaAsset = <TError = ErrorType<void>,
       > => {
       return useMutation(getRegisterMediaAssetMutationOptions(options));
     }
+
+export const getCreateMediaIngestionUrl = () => {
+
+
+
+
+  return `/api/admin/media-ingestions`
+}
+
+/**
+ * @summary Queue local video transcoding
+ */
+export const createMediaIngestion = async (mediaIngestionInput: MediaIngestionInput, options?: Parameters<typeof customFetch>[1]): Promise<MediaIngestionJob> => {
+
+  return customFetch<MediaIngestionJob>(getCreateMediaIngestionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(mediaIngestionInput)
+  }
+);}
+
+
+
+
+
+export const getCreateMediaIngestionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMediaIngestion>>, TError,{data: BodyType<MediaIngestionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMediaIngestion>>, TError,{data: BodyType<MediaIngestionInput>}, TContext> => {
+
+const mutationKey = ['createMediaIngestion'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMediaIngestion>>, {data: BodyType<MediaIngestionInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMediaIngestion(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMediaIngestionMutationResult = NonNullable<Awaited<ReturnType<typeof createMediaIngestion>>>
+    export type CreateMediaIngestionMutationBody = BodyType<MediaIngestionInput>
+    export type CreateMediaIngestionMutationError = ErrorType<void>
+
+    /**
+ * @summary Queue local video transcoding
+ */
+export const useCreateMediaIngestion = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMediaIngestion>>, TError,{data: BodyType<MediaIngestionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMediaIngestion>>,
+        TError,
+        {data: BodyType<MediaIngestionInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMediaIngestionMutationOptions(options));
+    }
+
+export const getGetMediaIngestionUrl = (jobId: number,) => {
+
+
+
+
+  return `/api/admin/media-ingestions/${jobId}`
+}
+
+/**
+ * @summary Get video transcoding job status
+ */
+export const getMediaIngestion = async (jobId: number, options?: Parameters<typeof customFetch>[1]): Promise<MediaIngestionJob> => {
+
+  return customFetch<MediaIngestionJob>(getGetMediaIngestionUrl(jobId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMediaIngestionQueryKey = (jobId: number,) => {
+    return [
+    `/api/admin/media-ingestions/${jobId}`
+    ] as const;
+    }
+
+
+export const getGetMediaIngestionQueryOptions = <TData = Awaited<ReturnType<typeof getMediaIngestion>>, TError = ErrorType<void>>(jobId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMediaIngestion>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMediaIngestionQueryKey(jobId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMediaIngestion>>> = ({ signal }) => getMediaIngestion(jobId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: jobId !== null && jobId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMediaIngestion>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMediaIngestionQueryResult = NonNullable<Awaited<ReturnType<typeof getMediaIngestion>>>
+export type GetMediaIngestionQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get video transcoding job status
+ */
+
+export function useGetMediaIngestion<TData = Awaited<ReturnType<typeof getMediaIngestion>>, TError = ErrorType<void>>(
+ jobId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMediaIngestion>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMediaIngestionQueryOptions(jobId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getImportCatalogMetadataUrl = () => {
 

@@ -1,6 +1,8 @@
 import {
   date,
+  index,
   integer,
+  jsonb,
   numeric,
   serial,
   boolean,
@@ -71,6 +73,7 @@ export const mediaAssetsTable = pgTable(
     label: varchar("label", { length: 50 }).notNull(),
     relativePath: text("relative_path").notNull(),
     mimeType: varchar("mime_type", { length: 120 }).notNull(),
+    language: varchar("language", { length: 12 }),
     width: integer("width"),
     height: integer("height"),
     bitrateKbps: integer("bitrate_kbps"),
@@ -85,6 +88,54 @@ export const mediaAssetsTable = pgTable(
       table.episodeId,
       table.kind,
       table.label,
+    ),
+  }),
+);
+
+export type MediaIngestionQuality = {
+  label: string;
+  height: number;
+  bitrateKbps: number;
+};
+
+export type MediaIngestionSubtitle = {
+  relativePath: string;
+  label: string;
+  language?: string;
+};
+
+export const mediaIngestionJobsTable = pgTable(
+  "media_ingestion_jobs",
+  {
+    id: serial("id").primaryKey(),
+    titleId: integer("title_id")
+      .notNull()
+      .references(() => catalogTitlesTable.id, { onDelete: "cascade" }),
+    episodeId: integer("episode_id").references(() => catalogEpisodesTable.id, {
+      onDelete: "cascade",
+    }),
+    sourceRelativePath: text("source_relative_path").notNull(),
+    status: varchar("status", { length: 20 }).notNull().default("queued"),
+    progress: integer("progress").notNull().default(0),
+    qualities: jsonb("qualities")
+      .$type<MediaIngestionQuality[]>()
+      .notNull(),
+    subtitles: jsonb("subtitles")
+      .$type<MediaIngestionSubtitle[]>()
+      .notNull()
+      .default([]),
+    includeDownloads: boolean("include_downloads").notNull().default(true),
+    error: text("error"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+  },
+  (table) => ({
+    statusIndex: index("media_ingestion_jobs_status_idx").on(
+      table.status,
+      table.createdAt,
     ),
   }),
 );

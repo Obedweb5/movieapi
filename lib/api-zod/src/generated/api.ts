@@ -100,6 +100,12 @@ export const GetPlaybackOptionsParams = zod.object({
   "id": zod.coerce.number().int().min(1)
 })
 
+export const getPlaybackOptionsResponseManifestOneLanguageRegExp = new RegExp('^[a-z]{2,3}(?:-[A-Z]{2})?$');
+export const getPlaybackOptionsResponseQualitiesItemLanguageRegExp = new RegExp('^[a-z]{2,3}(?:-[A-Z]{2})?$');
+export const getPlaybackOptionsResponseDownloadsItemLanguageRegExp = new RegExp('^[a-z]{2,3}(?:-[A-Z]{2})?$');
+export const getPlaybackOptionsResponseSubtitlesItemLanguageRegExp = new RegExp('^[a-z]{2,3}(?:-[A-Z]{2})?$');
+
+
 export const GetPlaybackOptionsResponse = zod.object({
   "titleId": zod.number().int(),
   "episodeId": zod.number().int().nullable(),
@@ -108,6 +114,7 @@ export const GetPlaybackOptionsResponse = zod.object({
   "label": zod.string(),
   "url": zod.string(),
   "mimeType": zod.string(),
+  "language": zod.string().regex(getPlaybackOptionsResponseManifestOneLanguageRegExp).nullish(),
   "width": zod.number().int().nullish(),
   "height": zod.number().int().nullish(),
   "bitrateKbps": zod.number().int().nullish(),
@@ -118,6 +125,7 @@ export const GetPlaybackOptionsResponse = zod.object({
   "label": zod.string(),
   "url": zod.string(),
   "mimeType": zod.string(),
+  "language": zod.string().regex(getPlaybackOptionsResponseQualitiesItemLanguageRegExp).nullish(),
   "width": zod.number().int().nullish(),
   "height": zod.number().int().nullish(),
   "bitrateKbps": zod.number().int().nullish(),
@@ -128,6 +136,18 @@ export const GetPlaybackOptionsResponse = zod.object({
   "label": zod.string(),
   "url": zod.string(),
   "mimeType": zod.string(),
+  "language": zod.string().regex(getPlaybackOptionsResponseDownloadsItemLanguageRegExp).nullish(),
+  "width": zod.number().int().nullish(),
+  "height": zod.number().int().nullish(),
+  "bitrateKbps": zod.number().int().nullish(),
+  "expiresAt": zod.coerce.date()
+})),
+  "subtitles": zod.array(zod.object({
+  "assetId": zod.number().int(),
+  "label": zod.string(),
+  "url": zod.string(),
+  "mimeType": zod.string(),
+  "language": zod.string().regex(getPlaybackOptionsResponseSubtitlesItemLanguageRegExp).nullish(),
   "width": zod.number().int().nullish(),
   "height": zod.number().int().nullish(),
   "bitrateKbps": zod.number().int().nullish(),
@@ -146,6 +166,12 @@ export const GetEpisodePlaybackOptionsParams = zod.object({
   "episodeId": zod.coerce.number().int().min(1)
 })
 
+export const getEpisodePlaybackOptionsResponseManifestOneLanguageRegExp = new RegExp('^[a-z]{2,3}(?:-[A-Z]{2})?$');
+export const getEpisodePlaybackOptionsResponseQualitiesItemLanguageRegExp = new RegExp('^[a-z]{2,3}(?:-[A-Z]{2})?$');
+export const getEpisodePlaybackOptionsResponseDownloadsItemLanguageRegExp = new RegExp('^[a-z]{2,3}(?:-[A-Z]{2})?$');
+export const getEpisodePlaybackOptionsResponseSubtitlesItemLanguageRegExp = new RegExp('^[a-z]{2,3}(?:-[A-Z]{2})?$');
+
+
 export const GetEpisodePlaybackOptionsResponse = zod.object({
   "titleId": zod.number().int(),
   "episodeId": zod.number().int().nullable(),
@@ -154,6 +180,7 @@ export const GetEpisodePlaybackOptionsResponse = zod.object({
   "label": zod.string(),
   "url": zod.string(),
   "mimeType": zod.string(),
+  "language": zod.string().regex(getEpisodePlaybackOptionsResponseManifestOneLanguageRegExp).nullish(),
   "width": zod.number().int().nullish(),
   "height": zod.number().int().nullish(),
   "bitrateKbps": zod.number().int().nullish(),
@@ -164,6 +191,7 @@ export const GetEpisodePlaybackOptionsResponse = zod.object({
   "label": zod.string(),
   "url": zod.string(),
   "mimeType": zod.string(),
+  "language": zod.string().regex(getEpisodePlaybackOptionsResponseQualitiesItemLanguageRegExp).nullish(),
   "width": zod.number().int().nullish(),
   "height": zod.number().int().nullish(),
   "bitrateKbps": zod.number().int().nullish(),
@@ -174,6 +202,18 @@ export const GetEpisodePlaybackOptionsResponse = zod.object({
   "label": zod.string(),
   "url": zod.string(),
   "mimeType": zod.string(),
+  "language": zod.string().regex(getEpisodePlaybackOptionsResponseDownloadsItemLanguageRegExp).nullish(),
+  "width": zod.number().int().nullish(),
+  "height": zod.number().int().nullish(),
+  "bitrateKbps": zod.number().int().nullish(),
+  "expiresAt": zod.coerce.date()
+})),
+  "subtitles": zod.array(zod.object({
+  "assetId": zod.number().int(),
+  "label": zod.string(),
+  "url": zod.string(),
+  "mimeType": zod.string(),
+  "language": zod.string().regex(getEpisodePlaybackOptionsResponseSubtitlesItemLanguageRegExp).nullish(),
   "width": zod.number().int().nullish(),
   "height": zod.number().int().nullish(),
   "bitrateKbps": zod.number().int().nullish(),
@@ -210,6 +250,7 @@ export const registerMediaAssetBodyLabelMax = 50;
 
 export const registerMediaAssetBodyMimeTypeMax = 120;
 
+export const registerMediaAssetBodyLanguageRegExp = new RegExp('^[a-z]{2,3}(?:-[A-Z]{2})?$');
 
 
 
@@ -222,11 +263,15 @@ export const RegisterMediaAssetBody = zod.object({
   "label": zod.string().min(1).max(registerMediaAssetBodyLabelMax),
   "relativePath": zod.string().min(1),
   "mimeType": zod.string().min(1).max(registerMediaAssetBodyMimeTypeMax),
+  "language": zod.string().regex(registerMediaAssetBodyLanguageRegExp).nullish(),
   "width": zod.number().int().min(1).nullish(),
   "height": zod.number().int().min(1).nullish(),
   "bitrateKbps": zod.number().int().min(1).nullish(),
   "isDownloadable": zod.boolean().default(registerMediaAssetBodyIsDownloadableDefault)
 })
+
+export const registerMediaAssetResponseLanguageRegExp = new RegExp('^[a-z]{2,3}(?:-[A-Z]{2})?$');
+
 
 export const RegisterMediaAssetResponse = zod.object({
   "id": zod.number().int(),
@@ -235,10 +280,154 @@ export const RegisterMediaAssetResponse = zod.object({
   "kind": zod.enum(['manifest', 'video', 'download', 'subtitle']),
   "label": zod.string(),
   "mimeType": zod.string(),
+  "language": zod.string().regex(registerMediaAssetResponseLanguageRegExp).nullish(),
   "width": zod.number().int().nullish(),
   "height": zod.number().int().nullish(),
   "bitrateKbps": zod.number().int().nullish(),
   "isDownloadable": zod.boolean()
+})
+
+
+/**
+ * @summary Queue local video transcoding
+ */
+export const CreateMediaIngestionHeader = zod.object({
+  "x-media-admin-key": zod.string().describe('Server-side MEDIA_ADMIN_KEY value')
+})
+
+
+
+
+export const createMediaIngestionBodyQualitiesItemLabelMax = 50;
+
+export const createMediaIngestionBodyQualitiesItemHeightMin = 144;
+export const createMediaIngestionBodyQualitiesItemHeightMax = 4320;
+
+export const createMediaIngestionBodyQualitiesItemBitrateKbpsMin = 100;
+export const createMediaIngestionBodyQualitiesItemBitrateKbpsMax = 50000;
+
+export const createMediaIngestionBodyQualitiesMax = 8;
+
+
+export const createMediaIngestionBodySubtitlesItemLabelMax = 50;
+
+export const createMediaIngestionBodySubtitlesItemLanguageRegExp = new RegExp('^[a-z]{2,3}(?:-[A-Z]{2})?$');
+export const createMediaIngestionBodySubtitlesMax = 20;
+
+export const createMediaIngestionBodyIncludeDownloadsDefault = true;
+
+export const CreateMediaIngestionBody = zod.object({
+  "titleId": zod.number().int().min(1),
+  "episodeId": zod.number().int().min(1).nullish(),
+  "sourceRelativePath": zod.string().min(1),
+  "qualities": zod.array(zod.object({
+  "label": zod.string().min(1).max(createMediaIngestionBodyQualitiesItemLabelMax),
+  "height": zod.number().int().min(createMediaIngestionBodyQualitiesItemHeightMin).max(createMediaIngestionBodyQualitiesItemHeightMax),
+  "bitrateKbps": zod.number().int().min(createMediaIngestionBodyQualitiesItemBitrateKbpsMin).max(createMediaIngestionBodyQualitiesItemBitrateKbpsMax)
+})).min(1).max(createMediaIngestionBodyQualitiesMax).optional(),
+  "subtitles": zod.array(zod.object({
+  "relativePath": zod.string().min(1),
+  "label": zod.string().min(1).max(createMediaIngestionBodySubtitlesItemLabelMax),
+  "language": zod.string().regex(createMediaIngestionBodySubtitlesItemLanguageRegExp).optional()
+})).max(createMediaIngestionBodySubtitlesMax).optional(),
+  "includeDownloads": zod.boolean().default(createMediaIngestionBodyIncludeDownloadsDefault)
+})
+
+export const createMediaIngestionResponseProgressMin = 0;
+export const createMediaIngestionResponseProgressMax = 100;
+
+export const createMediaIngestionResponseQualitiesItemLabelMax = 50;
+
+export const createMediaIngestionResponseQualitiesItemHeightMin = 144;
+export const createMediaIngestionResponseQualitiesItemHeightMax = 4320;
+
+export const createMediaIngestionResponseQualitiesItemBitrateKbpsMin = 100;
+export const createMediaIngestionResponseQualitiesItemBitrateKbpsMax = 50000;
+
+
+export const createMediaIngestionResponseSubtitlesItemLabelMax = 50;
+
+export const createMediaIngestionResponseSubtitlesItemLanguageRegExp = new RegExp('^[a-z]{2,3}(?:-[A-Z]{2})?$');
+
+
+export const CreateMediaIngestionResponse = zod.object({
+  "id": zod.number().int(),
+  "titleId": zod.number().int(),
+  "episodeId": zod.number().int().nullish(),
+  "sourceRelativePath": zod.string(),
+  "status": zod.enum(['queued', 'processing', 'completed', 'failed']),
+  "progress": zod.number().int().min(createMediaIngestionResponseProgressMin).max(createMediaIngestionResponseProgressMax),
+  "qualities": zod.array(zod.object({
+  "label": zod.string().min(1).max(createMediaIngestionResponseQualitiesItemLabelMax),
+  "height": zod.number().int().min(createMediaIngestionResponseQualitiesItemHeightMin).max(createMediaIngestionResponseQualitiesItemHeightMax),
+  "bitrateKbps": zod.number().int().min(createMediaIngestionResponseQualitiesItemBitrateKbpsMin).max(createMediaIngestionResponseQualitiesItemBitrateKbpsMax)
+})),
+  "subtitles": zod.array(zod.object({
+  "relativePath": zod.string().min(1),
+  "label": zod.string().min(1).max(createMediaIngestionResponseSubtitlesItemLabelMax),
+  "language": zod.string().regex(createMediaIngestionResponseSubtitlesItemLanguageRegExp).optional()
+})),
+  "includeDownloads": zod.boolean(),
+  "error": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "startedAt": zod.coerce.date().nullish(),
+  "completedAt": zod.coerce.date().nullish()
+})
+
+
+/**
+ * @summary Get video transcoding job status
+ */
+
+
+
+export const GetMediaIngestionParams = zod.object({
+  "jobId": zod.coerce.number().int().min(1)
+})
+
+export const GetMediaIngestionHeader = zod.object({
+  "x-media-admin-key": zod.string().describe('Server-side MEDIA_ADMIN_KEY value')
+})
+
+export const getMediaIngestionResponseProgressMin = 0;
+export const getMediaIngestionResponseProgressMax = 100;
+
+export const getMediaIngestionResponseQualitiesItemLabelMax = 50;
+
+export const getMediaIngestionResponseQualitiesItemHeightMin = 144;
+export const getMediaIngestionResponseQualitiesItemHeightMax = 4320;
+
+export const getMediaIngestionResponseQualitiesItemBitrateKbpsMin = 100;
+export const getMediaIngestionResponseQualitiesItemBitrateKbpsMax = 50000;
+
+
+export const getMediaIngestionResponseSubtitlesItemLabelMax = 50;
+
+export const getMediaIngestionResponseSubtitlesItemLanguageRegExp = new RegExp('^[a-z]{2,3}(?:-[A-Z]{2})?$');
+
+
+export const GetMediaIngestionResponse = zod.object({
+  "id": zod.number().int(),
+  "titleId": zod.number().int(),
+  "episodeId": zod.number().int().nullish(),
+  "sourceRelativePath": zod.string(),
+  "status": zod.enum(['queued', 'processing', 'completed', 'failed']),
+  "progress": zod.number().int().min(getMediaIngestionResponseProgressMin).max(getMediaIngestionResponseProgressMax),
+  "qualities": zod.array(zod.object({
+  "label": zod.string().min(1).max(getMediaIngestionResponseQualitiesItemLabelMax),
+  "height": zod.number().int().min(getMediaIngestionResponseQualitiesItemHeightMin).max(getMediaIngestionResponseQualitiesItemHeightMax),
+  "bitrateKbps": zod.number().int().min(getMediaIngestionResponseQualitiesItemBitrateKbpsMin).max(getMediaIngestionResponseQualitiesItemBitrateKbpsMax)
+})),
+  "subtitles": zod.array(zod.object({
+  "relativePath": zod.string().min(1),
+  "label": zod.string().min(1).max(getMediaIngestionResponseSubtitlesItemLabelMax),
+  "language": zod.string().regex(getMediaIngestionResponseSubtitlesItemLanguageRegExp).optional()
+})),
+  "includeDownloads": zod.boolean(),
+  "error": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "startedAt": zod.coerce.date().nullish(),
+  "completedAt": zod.coerce.date().nullish()
 })
 
 

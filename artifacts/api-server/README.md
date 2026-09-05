@@ -14,6 +14,8 @@ authorization headers, or other protected streaming data.
 - `GET /api/episodes/:episodeId/playback` — signed playback options for a selected episode
 - `GET /api/media/assets/:assetId/:token` — signed byte-range media serving
 - `POST /api/admin/media-assets` — register an owned local media file
+- `POST /api/admin/media-ingestions` — queue FFmpeg transcoding for a local source
+- `GET /api/admin/media-ingestions/:jobId` — read a transcoding job’s status
 - `POST /api/catalog/import` — import metadata from an approved public HTML URL
 
 Example import request:
@@ -49,6 +51,11 @@ Set these environment variables on the VPS:
 - `MEDIA_ADMIN_KEY` — private key required to register files
 - `MEDIA_SIGNING_SECRET` — signing secret for expiring playback URLs. If omitted,
   `SESSION_SECRET` is used.
+- `FFMPEG_PATH` / `FFPROBE_PATH` — optional FFmpeg binary paths (defaults to
+  `ffmpeg` and `ffprobe`)
+- `MEDIA_TRANSCODE_QUALITIES` — optional comma-separated `height:bitrateKbps`
+  profiles, for example `1080:5000,720:2800,480:1400`
+- `MEDIA_FFMPEG_PRESET` — optional FFmpeg encoder preset (defaults to `medium`)
 
 Register a pre-encoded file:
 
@@ -73,3 +80,30 @@ For HLS, register a `manifest` asset with
 `application/vnd.apple.mpegurl`, plus one or more `video` assets for quality
 selection. The service only serves files inside `MEDIA_LIBRARY_ROOT`, validates
 signed URLs, and supports HTTP byte ranges.
+
+Queue a source video for generated HLS, DASH, quality MP4s, and optional
+subtitles:
+
+```bash
+curl -X POST https://your-domain.example/api/admin/media-ingestions \
+  -H "Content-Type: application/json" \
+  -H "x-media-admin-key: $MEDIA_ADMIN_KEY" \
+  -d '{
+    "titleId": 1,
+    "sourceRelativePath": "uploads/title-1/source.mp4",
+    "qualities": [
+      { "label": "720p", "height": 720, "bitrateKbps": 2800 },
+      { "label": "480p", "height": 480, "bitrateKbps": 1400 }
+    ],
+    "subtitles": [
+      { "label": "English", "language": "en", "relativePath": "subs/title-1-en.vtt" }
+    ],
+    "includeDownloads": true
+  }'
+```
+
+The response contains a job id. Poll
+`GET /api/admin/media-ingestions/:jobId` with the same admin header until the
+status is `completed` or `failed`. Generated files are written below
+`MEDIA_LIBRARY_ROOT/transcoded/<titleId>/<jobId>` and are registered as signed
+media assets automatically.

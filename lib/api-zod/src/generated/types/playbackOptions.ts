@@ -15,4 +15,5 @@ export interface PlaybackOptions {
   manifest: SignedAsset | null;
   qualities: SignedAsset[];
   downloads: SignedAsset[];
+  subtitles: SignedAsset[];
 }

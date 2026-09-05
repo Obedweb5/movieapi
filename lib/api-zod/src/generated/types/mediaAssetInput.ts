@@ -29,6 +29,11 @@ export interface MediaAssetInput {
      */
   mimeType: string;
   /**
+     * @nullable
+     * @pattern ^[a-z]{2,3}(?:-[A-Z]{2})?$
+     */
+  language?: string | null;
+  /**
      * @minimum 1
      * @nullable
      */

@@ -92,6 +92,11 @@ export interface MediaAsset {
   kind: MediaAssetKind;
   label: string;
   mimeType: string;
+  /**
+     * @nullable
+     * @pattern ^[a-z]{2,3}(?:-[A-Z]{2})?$
+     */
+  language?: string | null;
   /** @nullable */
   width?: number | null;
   /** @nullable */
@@ -133,6 +138,11 @@ export interface MediaAssetInput {
      */
   mimeType: string;
   /**
+     * @nullable
+     * @pattern ^[a-z]{2,3}(?:-[A-Z]{2})?$
+     */
+  language?: string | null;
+  /**
      * @minimum 1
      * @nullable
      */
@@ -150,11 +160,100 @@ export interface MediaAssetInput {
   isDownloadable?: boolean;
 }
 
+export interface MediaIngestionQuality {
+  /**
+     * @minLength 1
+     * @maxLength 50
+     */
+  label: string;
+  /**
+     * @minimum 144
+     * @maximum 4320
+     */
+  height: number;
+  /**
+     * @minimum 100
+     * @maximum 50000
+     */
+  bitrateKbps: number;
+}
+
+export interface MediaIngestionSubtitle {
+  /** @minLength 1 */
+  relativePath: string;
+  /**
+     * @minLength 1
+     * @maxLength 50
+     */
+  label: string;
+  /** @pattern ^[a-z]{2,3}(?:-[A-Z]{2})?$ */
+  language?: string;
+}
+
+export interface MediaIngestionInput {
+  /** @minimum 1 */
+  titleId: number;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  episodeId?: number | null;
+  /** @minLength 1 */
+  sourceRelativePath: string;
+  /**
+     * @minItems 1
+     * @maxItems 8
+     */
+  qualities?: MediaIngestionQuality[];
+  /** @maxItems 20 */
+  subtitles?: MediaIngestionSubtitle[];
+  includeDownloads?: boolean;
+}
+
+export type MediaIngestionJobStatus = typeof MediaIngestionJobStatus[keyof typeof MediaIngestionJobStatus];
+
+
+export const MediaIngestionJobStatus = {
+  queued: 'queued',
+  processing: 'processing',
+  completed: 'completed',
+  failed: 'failed',
+} as const;
+
+export interface MediaIngestionJob {
+  id: number;
+  titleId: number;
+  /** @nullable */
+  episodeId?: number | null;
+  sourceRelativePath: string;
+  status: MediaIngestionJobStatus;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  progress: number;
+  qualities: MediaIngestionQuality[];
+  subtitles: MediaIngestionSubtitle[];
+  includeDownloads: boolean;
+  /** @nullable */
+  error?: string | null;
+  createdAt: string;
+  /** @nullable */
+  startedAt?: string | null;
+  /** @nullable */
+  completedAt?: string | null;
+}
+
 export interface SignedAsset {
   assetId: number;
   label: string;
   url: string;
   mimeType: string;
+  /**
+     * @nullable
+     * @pattern ^[a-z]{2,3}(?:-[A-Z]{2})?$
+     */
+  language?: string | null;
   /** @nullable */
   width?: number | null;
   /** @nullable */
@@ -172,6 +271,7 @@ export interface PlaybackOptions {
   manifest: SignedAsset | null;
   qualities: SignedAsset[];
   downloads: SignedAsset[];
+  subtitles: SignedAsset[];
 }
 
 export type ListTitlesParams = {

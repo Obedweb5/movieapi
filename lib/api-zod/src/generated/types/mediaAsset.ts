@@ -15,6 +15,11 @@ export interface MediaAsset {
   kind: MediaAssetKind;
   label: string;
   mimeType: string;
+  /**
+     * @nullable
+     * @pattern ^[a-z]{2,3}(?:-[A-Z]{2})?$
+     */
+  language?: string | null;
   /** @nullable */
   width?: number | null;
   /** @nullable */
