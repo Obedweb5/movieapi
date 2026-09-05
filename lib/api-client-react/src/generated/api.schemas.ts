@@ -59,6 +59,45 @@ export interface TitleListResponse {
   totalPages: number;
 }
 
+export interface ProgressUpdateInput {
+  /** @minimum 0 */
+  positionSeconds: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  durationSeconds?: number | null;
+  completed: boolean;
+}
+
+export type TitleProgressInput = ProgressUpdateInput & ({
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  episodeId?: number | null;
+});
+
+export interface ProgressRecord {
+  titleId: number;
+  /** @nullable */
+  episodeId: number | null;
+  /** @minimum 0 */
+  positionSeconds: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  durationSeconds: number | null;
+  completed: boolean;
+  updatedAt: string;
+}
+
+export interface TitleProgressResponse {
+  titleId: number;
+  items: ProgressRecord[];
+}
+
 export interface CatalogImportInput {
   sourceUrl: string;
   /**

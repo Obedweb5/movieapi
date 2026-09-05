@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: catalog
     description: Public catalog metadata operations
+  - name: progress
+    description: Authenticated watch progress operations
 paths:
   /healthz:
     get:
@@ -108,6 +110,122 @@ paths:
                 $ref: "#/components/schemas/PlaybackOptions"
         "404":
           description: Title or media assets not found
+  /titles/{id}/progress:
+    get:
+      operationId: getTitleProgress
+      tags: [progress]
+      summary: Read the signed-in user's progress for a title
+      security:
+        - clerkSession: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Progress records for the title
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TitleProgressResponse"
+        "401":
+          description: Authentication required
+        "404":
+          description: Title not found
+    put:
+      operationId: updateTitleProgress
+      tags: [progress]
+      summary: Save the signed-in user's progress for a title or episode
+      security:
+        - clerkSession: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TitleProgressInput"
+      responses:
+        "200":
+          description: Saved progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressRecord"
+        "400":
+          description: Invalid progress or episode does not belong to title
+        "401":
+          description: Authentication required
+        "404":
+          description: Title not found
+  /episodes/{episodeId}/progress:
+    get:
+      operationId: getEpisodeProgress
+      tags: [progress]
+      summary: Read the signed-in user's progress for an episode
+      security:
+        - clerkSession: []
+      parameters:
+        - in: path
+          name: episodeId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Saved progress, or null when playback has not started
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ProgressRecord"
+                  - type: "null"
+        "401":
+          description: Authentication required
+        "404":
+          description: Episode not found
+    put:
+      operationId: updateEpisodeProgress
+      tags: [progress]
+      summary: Save the signed-in user's progress for an episode
+      security:
+        - clerkSession: []
+      parameters:
+        - in: path
+          name: episodeId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProgressUpdateInput"
+      responses:
+        "200":
+          description: Saved progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressRecord"
+        "400":
+          description: Invalid progress
+        "401":
+          description: Authentication required
+        "404":
+          description: Episode not found
   /episodes/{episodeId}/playback:
     get:
       operationId: getEpisodePlaybackOptions
@@ -269,6 +387,11 @@ paths:
         "502":
           description: Source could not be fetched
 components:
+  securitySchemes:
+    clerkSession:
+      type: http
+      scheme: bearer
+      bearerFormat: Clerk session
   schemas:
     HealthStatus:
       type: object
@@ -355,6 +478,56 @@ components:
           type: integer
         totalPages:
           type: integer
+    ProgressUpdateInput:
+      type: object
+      required: [positionSeconds, completed]
+      properties:
+        positionSeconds:
+          type: integer
+          minimum: 0
+        durationSeconds:
+          type: ["integer", "null"]
+          minimum: 0
+        completed:
+          type: boolean
+    TitleProgressInput:
+      allOf:
+        - $ref: "#/components/schemas/ProgressUpdateInput"
+        - type: object
+          properties:
+            episodeId:
+              type: ["integer", "null"]
+              minimum: 1
+    ProgressRecord:
+      type: object
+      required:
+        [titleId, episodeId, positionSeconds, durationSeconds, completed, updatedAt]
+      properties:
+        titleId:
+          type: integer
+        episodeId:
+          type: ["integer", "null"]
+        positionSeconds:
+          type: integer
+          minimum: 0
+        durationSeconds:
+          type: ["integer", "null"]
+          minimum: 0
+        completed:
+          type: boolean
+        updatedAt:
+          type: string
+          format: date-time
+    TitleProgressResponse:
+      type: object
+      required: [titleId, items]
+      properties:
+        titleId:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProgressRecord"
     CatalogImportInput:
       type: object
       required: [sourceUrl]

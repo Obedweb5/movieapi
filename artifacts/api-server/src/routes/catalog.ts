@@ -12,6 +12,10 @@ import {
   GetPlaybackOptionsResponse,
   GetTitleParams,
   GetTitleResponse,
+  GetEpisodeProgressParams,
+  GetEpisodeProgressResponse,
+  GetTitleProgressParams,
+  GetTitleProgressResponse,
   ImportCatalogMetadataBody,
   ImportCatalogMetadataResponse,
   ListTitlesQueryParams,
@@ -23,12 +27,17 @@ import {
   CreateMediaIngestionBody,
   CreateMediaIngestionHeader,
   CreateMediaIngestionResponse,
+  UpdateEpisodeProgressBody,
+  UpdateEpisodeProgressResponse,
+  UpdateTitleProgressBody,
+  UpdateTitleProgressResponse,
 } from "@workspace/api-zod";
 import {
   catalogEpisodesTable,
   catalogTitlesTable,
   db,
   mediaAssetsTable,
+  watchProgressTable,
 } from "@workspace/db";
 import { scrapePublicCatalog } from "../lib/catalog-source";
 import {
@@ -41,6 +50,7 @@ import {
   signedMediaAsset,
   verifyMediaToken,
 } from "../lib/media-signing";
+import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -200,6 +210,283 @@ router.get("/titles/:id", async (req, res): Promise<void> => {
     }),
   );
 });
+
+function toProgressResponse(
+  progress: typeof watchProgressTable.$inferSelect,
+) {
+  return {
+    titleId: progress.titleId,
+    episodeId: progress.episodeId,
+    positionSeconds: progress.positionSeconds,
+    durationSeconds: progress.durationSeconds,
+    completed: progress.completed,
+    updatedAt: progress.updatedAt,
+  };
+}
+
+async function getTitleProgress(
+  userId: string,
+  titleId: number,
+  episodeId: number | null | undefined,
+) {
+  const filters = [
+    eq(watchProgressTable.userId, userId),
+    eq(watchProgressTable.titleId, titleId),
+    episodeId === undefined
+      ? undefined
+      : episodeId === null
+        ? isNull(watchProgressTable.episodeId)
+        : eq(watchProgressTable.episodeId, episodeId),
+  ].filter(Boolean);
+
+  return db
+    .select()
+    .from(watchProgressTable)
+    .where(and(...filters))
+    .orderBy(desc(watchProgressTable.updatedAt));
+}
+
+async function saveProgress({
+  userId,
+  titleId,
+  episodeId,
+  positionSeconds,
+  durationSeconds,
+  completed,
+}: {
+  userId: string;
+  titleId: number;
+  episodeId: number | null;
+  positionSeconds: number;
+  durationSeconds: number | null;
+  completed: boolean;
+}) {
+  const values = {
+    userId,
+    titleId,
+    episodeId,
+    positionSeconds,
+    durationSeconds,
+    completed,
+    updatedAt: new Date(),
+  };
+
+  const [inserted] = await db
+    .insert(watchProgressTable)
+    .values(values)
+    .onConflictDoNothing()
+    .returning();
+  if (inserted) return inserted;
+
+  const filters = [
+    eq(watchProgressTable.userId, userId),
+    eq(watchProgressTable.titleId, titleId),
+    episodeId === null
+      ? isNull(watchProgressTable.episodeId)
+      : eq(watchProgressTable.episodeId, episodeId),
+  ];
+  const [updated] = await db
+    .update(watchProgressTable)
+    .set(values)
+    .where(and(...filters))
+    .returning();
+  return updated;
+}
+
+async function ensureTitleAndEpisode(
+  titleId: number,
+  episodeId: number | null,
+) {
+  const [title] = await db
+    .select({ id: catalogTitlesTable.id })
+    .from(catalogTitlesTable)
+    .where(eq(catalogTitlesTable.id, titleId))
+    .limit(1);
+  if (!title) return "Title not found";
+
+  if (episodeId !== null) {
+    const [episode] = await db
+      .select({
+        id: catalogEpisodesTable.id,
+        titleId: catalogEpisodesTable.titleId,
+      })
+      .from(catalogEpisodesTable)
+      .where(eq(catalogEpisodesTable.id, episodeId))
+      .limit(1);
+    if (!episode) return "Episode not found";
+    if (episode.titleId !== titleId) return "Episode does not belong to title";
+  }
+  return null;
+}
+
+router.get(
+  "/titles/:id/progress",
+  requireAuth,
+  async (req, res): Promise<void> => {
+    const parsed = GetTitleProgressParams.safeParse(req.params);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    const [title] = await db
+      .select({ id: catalogTitlesTable.id })
+      .from(catalogTitlesTable)
+      .where(eq(catalogTitlesTable.id, parsed.data.id))
+      .limit(1);
+    if (!title) {
+      res.status(404).json({ error: "Title not found" });
+      return;
+    }
+
+    const progress = await getTitleProgress(
+      res.locals.userId,
+      title.id,
+      undefined,
+    );
+    res.json(
+      GetTitleProgressResponse.parse({
+        titleId: title.id,
+        items: progress.map(toProgressResponse),
+      }),
+    );
+  },
+);
+
+router.put(
+  "/titles/:id/progress",
+  requireAuth,
+  async (req, res): Promise<void> => {
+    const params = GetTitleProgressParams.safeParse(req.params);
+    const body = UpdateTitleProgressBody.safeParse(req.body);
+    if (!params.success || !body.success) {
+      res.status(400).json({
+        error: !params.success
+          ? params.error.message
+          : !body.success
+            ? body.error.message
+            : "Invalid request",
+      });
+      return;
+    }
+
+    const episodeId = body.data.episodeId ?? null;
+    const validationError = await ensureTitleAndEpisode(params.data.id, episodeId);
+    if (validationError) {
+      res
+        .status(
+          validationError === "Title not found" ||
+            validationError === "Episode not found"
+            ? 404
+            : 400,
+        )
+        .json({
+        error: validationError,
+      });
+      return;
+    }
+
+    const progress = await saveProgress({
+      userId: res.locals.userId,
+      titleId: params.data.id,
+      episodeId,
+      positionSeconds: body.data.positionSeconds,
+      durationSeconds: body.data.durationSeconds ?? null,
+      completed: body.data.completed,
+    });
+    if (!progress) {
+      res.status(409).json({ error: "Unable to save progress" });
+      return;
+    }
+    res.json(
+      UpdateTitleProgressResponse.parse(toProgressResponse(progress)),
+    );
+  },
+);
+
+router.get(
+  "/episodes/:episodeId/progress",
+  requireAuth,
+  async (req, res): Promise<void> => {
+    const parsed = GetEpisodeProgressParams.safeParse(req.params);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    const [episode] = await db
+      .select({
+        id: catalogEpisodesTable.id,
+        titleId: catalogEpisodesTable.titleId,
+      })
+      .from(catalogEpisodesTable)
+      .where(eq(catalogEpisodesTable.id, parsed.data.episodeId))
+      .limit(1);
+    if (!episode) {
+      res.status(404).json({ error: "Episode not found" });
+      return;
+    }
+
+    const [progress] = await getTitleProgress(
+      res.locals.userId,
+      episode.titleId,
+      episode.id,
+    );
+    res.json(
+      GetEpisodeProgressResponse.parse(
+        progress ? toProgressResponse(progress) : null,
+      ),
+    );
+  },
+);
+
+router.put(
+  "/episodes/:episodeId/progress",
+  requireAuth,
+  async (req, res): Promise<void> => {
+    const params = GetEpisodeProgressParams.safeParse(req.params);
+    const body = UpdateEpisodeProgressBody.safeParse(req.body);
+    if (!params.success || !body.success) {
+      res.status(400).json({
+        error: !params.success
+          ? params.error.message
+          : !body.success
+            ? body.error.message
+            : "Invalid request",
+      });
+      return;
+    }
+
+    const [episode] = await db
+      .select({
+        id: catalogEpisodesTable.id,
+        titleId: catalogEpisodesTable.titleId,
+      })
+      .from(catalogEpisodesTable)
+      .where(eq(catalogEpisodesTable.id, params.data.episodeId))
+      .limit(1);
+    if (!episode) {
+      res.status(404).json({ error: "Episode not found" });
+      return;
+    }
+
+    const progress = await saveProgress({
+      userId: res.locals.userId,
+      titleId: episode.titleId,
+      episodeId: episode.id,
+      positionSeconds: body.data.positionSeconds,
+      durationSeconds: body.data.durationSeconds ?? null,
+      completed: body.data.completed,
+    });
+    if (!progress) {
+      res.status(409).json({ error: "Unable to save progress" });
+      return;
+    }
+    res.json(
+      UpdateEpisodeProgressResponse.parse(toProgressResponse(progress)),
+    );
+  },
+);
 
 async function playbackOptions(
   titleId: number,

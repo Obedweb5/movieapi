@@ -29,8 +29,12 @@ import type {
   MediaIngestionInput,
   MediaIngestionJob,
   PlaybackOptions,
+  ProgressRecord,
+  ProgressUpdateInput,
   TitleDetail,
-  TitleListResponse
+  TitleListResponse,
+  TitleProgressInput,
+  TitleProgressResponse
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -375,6 +379,304 @@ export function useGetPlaybackOptions<TData = Awaited<ReturnType<typeof getPlayb
 
 
 
+
+export const getGetTitleProgressUrl = (id: number,) => {
+
+
+
+
+  return `/api/titles/${id}/progress`
+}
+
+/**
+ * @summary Read the signed-in user's progress for a title
+ */
+export const getTitleProgress = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<TitleProgressResponse> => {
+
+  return customFetch<TitleProgressResponse>(getGetTitleProgressUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTitleProgressQueryKey = (id: number,) => {
+    return [
+    `/api/titles/${id}/progress`
+    ] as const;
+    }
+
+
+export const getGetTitleProgressQueryOptions = <TData = Awaited<ReturnType<typeof getTitleProgress>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTitleProgress>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTitleProgressQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTitleProgress>>> = ({ signal }) => getTitleProgress(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTitleProgress>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTitleProgressQueryResult = NonNullable<Awaited<ReturnType<typeof getTitleProgress>>>
+export type GetTitleProgressQueryError = ErrorType<void>
+
+
+/**
+ * @summary Read the signed-in user's progress for a title
+ */
+
+export function useGetTitleProgress<TData = Awaited<ReturnType<typeof getTitleProgress>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTitleProgress>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTitleProgressQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateTitleProgressUrl = (id: number,) => {
+
+
+
+
+  return `/api/titles/${id}/progress`
+}
+
+/**
+ * @summary Save the signed-in user's progress for a title or episode
+ */
+export const updateTitleProgress = async (id: number,
+    titleProgressInput: TitleProgressInput, options?: Parameters<typeof customFetch>[1]): Promise<ProgressRecord> => {
+
+  return customFetch<ProgressRecord>(getUpdateTitleProgressUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(titleProgressInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateTitleProgressMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTitleProgress>>, TError,{id: number;data: BodyType<TitleProgressInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateTitleProgress>>, TError,{id: number;data: BodyType<TitleProgressInput>}, TContext> => {
+
+const mutationKey = ['updateTitleProgress'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateTitleProgress>>, {id: number;data: BodyType<TitleProgressInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateTitleProgress(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateTitleProgressMutationResult = NonNullable<Awaited<ReturnType<typeof updateTitleProgress>>>
+    export type UpdateTitleProgressMutationBody = BodyType<TitleProgressInput>
+    export type UpdateTitleProgressMutationError = ErrorType<void>
+
+    /**
+ * @summary Save the signed-in user's progress for a title or episode
+ */
+export const useUpdateTitleProgress = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTitleProgress>>, TError,{id: number;data: BodyType<TitleProgressInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateTitleProgress>>,
+        TError,
+        {id: number;data: BodyType<TitleProgressInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateTitleProgressMutationOptions(options));
+    }
+
+export const getGetEpisodeProgressUrl = (episodeId: number,) => {
+
+
+
+
+  return `/api/episodes/${episodeId}/progress`
+}
+
+/**
+ * @summary Read the signed-in user's progress for an episode
+ */
+export const getEpisodeProgress = async (episodeId: number, options?: Parameters<typeof customFetch>[1]): Promise<ProgressRecord | null> => {
+
+  return customFetch<ProgressRecord | null>(getGetEpisodeProgressUrl(episodeId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEpisodeProgressQueryKey = (episodeId: number,) => {
+    return [
+    `/api/episodes/${episodeId}/progress`
+    ] as const;
+    }
+
+
+export const getGetEpisodeProgressQueryOptions = <TData = Awaited<ReturnType<typeof getEpisodeProgress>>, TError = ErrorType<void>>(episodeId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEpisodeProgress>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEpisodeProgressQueryKey(episodeId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEpisodeProgress>>> = ({ signal }) => getEpisodeProgress(episodeId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: episodeId !== null && episodeId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEpisodeProgress>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEpisodeProgressQueryResult = NonNullable<Awaited<ReturnType<typeof getEpisodeProgress>>>
+export type GetEpisodeProgressQueryError = ErrorType<void>
+
+
+/**
+ * @summary Read the signed-in user's progress for an episode
+ */
+
+export function useGetEpisodeProgress<TData = Awaited<ReturnType<typeof getEpisodeProgress>>, TError = ErrorType<void>>(
+ episodeId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEpisodeProgress>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEpisodeProgressQueryOptions(episodeId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateEpisodeProgressUrl = (episodeId: number,) => {
+
+
+
+
+  return `/api/episodes/${episodeId}/progress`
+}
+
+/**
+ * @summary Save the signed-in user's progress for an episode
+ */
+export const updateEpisodeProgress = async (episodeId: number,
+    progressUpdateInput: ProgressUpdateInput, options?: Parameters<typeof customFetch>[1]): Promise<ProgressRecord> => {
+
+  return customFetch<ProgressRecord>(getUpdateEpisodeProgressUrl(episodeId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(progressUpdateInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateEpisodeProgressMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEpisodeProgress>>, TError,{episodeId: number;data: BodyType<ProgressUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateEpisodeProgress>>, TError,{episodeId: number;data: BodyType<ProgressUpdateInput>}, TContext> => {
+
+const mutationKey = ['updateEpisodeProgress'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateEpisodeProgress>>, {episodeId: number;data: BodyType<ProgressUpdateInput>}> = (props) => {
+          const {episodeId,data} = props ?? {};
+
+          return  updateEpisodeProgress(episodeId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateEpisodeProgressMutationResult = NonNullable<Awaited<ReturnType<typeof updateEpisodeProgress>>>
+    export type UpdateEpisodeProgressMutationBody = BodyType<ProgressUpdateInput>
+    export type UpdateEpisodeProgressMutationError = ErrorType<void>
+
+    /**
+ * @summary Save the signed-in user's progress for an episode
+ */
+export const useUpdateEpisodeProgress = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEpisodeProgress>>, TError,{episodeId: number;data: BodyType<ProgressUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateEpisodeProgress>>,
+        TError,
+        {episodeId: number;data: BodyType<ProgressUpdateInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateEpisodeProgressMutationOptions(options));
+    }
 
 export const getGetEpisodePlaybackOptionsUrl = (episodeId: number,) => {
 

@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   date,
   index,
@@ -56,6 +57,35 @@ export const catalogEpisodesTable = pgTable(
       table.seasonNumber,
       table.episodeNumber,
     ),
+  }),
+);
+
+export const watchProgressTable = pgTable(
+  "watch_progress",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 }).notNull(),
+    titleId: integer("title_id")
+      .notNull()
+      .references(() => catalogTitlesTable.id, { onDelete: "cascade" }),
+    episodeId: integer("episode_id").references(() => catalogEpisodesTable.id, {
+      onDelete: "cascade",
+    }),
+    positionSeconds: integer("position_seconds").notNull().default(0),
+    durationSeconds: integer("duration_seconds"),
+    completed: boolean("completed").notNull().default(false),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    titleProgressIndex: uniqueIndex("watch_progress_title_identity_idx")
+      .on(table.userId, table.titleId)
+      .where(sql`${table.episodeId} is null`),
+    episodeProgressIndex: uniqueIndex("watch_progress_episode_identity_idx")
+      .on(table.userId, table.episodeId)
+      .where(sql`${table.episodeId} is not null`),
+    updatedAtIndex: index("watch_progress_updated_at_idx").on(table.userId, table.updatedAt),
   }),
 );
 

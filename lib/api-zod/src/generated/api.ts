@@ -157,6 +157,140 @@ export const GetPlaybackOptionsResponse = zod.object({
 
 
 /**
+ * @summary Read the signed-in user's progress for a title
+ */
+
+
+
+export const GetTitleProgressParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const getTitleProgressResponseItemsItemPositionSecondsMin = 0;
+
+export const getTitleProgressResponseItemsItemDurationSecondsMin = 0;
+
+
+
+export const GetTitleProgressResponse = zod.object({
+  "titleId": zod.number().int(),
+  "items": zod.array(zod.object({
+  "titleId": zod.number().int(),
+  "episodeId": zod.number().int().nullable(),
+  "positionSeconds": zod.number().int().min(getTitleProgressResponseItemsItemPositionSecondsMin),
+  "durationSeconds": zod.number().int().min(getTitleProgressResponseItemsItemDurationSecondsMin).nullable(),
+  "completed": zod.boolean(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Save the signed-in user's progress for a title or episode
+ */
+
+
+
+export const UpdateTitleProgressParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const updateTitleProgressBodyOnePositionSecondsMin = 0;
+
+export const updateTitleProgressBodyOneDurationSecondsMin = 0;
+
+
+
+
+export const UpdateTitleProgressBody = zod.object({
+  "positionSeconds": zod.number().int().min(updateTitleProgressBodyOnePositionSecondsMin),
+  "durationSeconds": zod.number().int().min(updateTitleProgressBodyOneDurationSecondsMin).nullish(),
+  "completed": zod.boolean()
+}).and(zod.object({
+  "episodeId": zod.number().int().min(1).nullish()
+}))
+
+export const updateTitleProgressResponsePositionSecondsMin = 0;
+
+export const updateTitleProgressResponseDurationSecondsMin = 0;
+
+
+
+export const UpdateTitleProgressResponse = zod.object({
+  "titleId": zod.number().int(),
+  "episodeId": zod.number().int().nullable(),
+  "positionSeconds": zod.number().int().min(updateTitleProgressResponsePositionSecondsMin),
+  "durationSeconds": zod.number().int().min(updateTitleProgressResponseDurationSecondsMin).nullable(),
+  "completed": zod.boolean(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Read the signed-in user's progress for an episode
+ */
+
+
+
+export const GetEpisodeProgressParams = zod.object({
+  "episodeId": zod.coerce.number().int().min(1)
+})
+
+export const getEpisodeProgressResponseOnePositionSecondsMin = 0;
+
+export const getEpisodeProgressResponseOneDurationSecondsMin = 0;
+
+
+
+export const GetEpisodeProgressResponse = zod.union([zod.object({
+  "titleId": zod.number().int(),
+  "episodeId": zod.number().int().nullable(),
+  "positionSeconds": zod.number().int().min(getEpisodeProgressResponseOnePositionSecondsMin),
+  "durationSeconds": zod.number().int().min(getEpisodeProgressResponseOneDurationSecondsMin).nullable(),
+  "completed": zod.boolean(),
+  "updatedAt": zod.coerce.date()
+}),zod.null()])
+
+
+/**
+ * @summary Save the signed-in user's progress for an episode
+ */
+
+
+
+export const UpdateEpisodeProgressParams = zod.object({
+  "episodeId": zod.coerce.number().int().min(1)
+})
+
+export const updateEpisodeProgressBodyPositionSecondsMin = 0;
+
+export const updateEpisodeProgressBodyDurationSecondsMin = 0;
+
+
+
+export const UpdateEpisodeProgressBody = zod.object({
+  "positionSeconds": zod.number().int().min(updateEpisodeProgressBodyPositionSecondsMin),
+  "durationSeconds": zod.number().int().min(updateEpisodeProgressBodyDurationSecondsMin).nullish(),
+  "completed": zod.boolean()
+})
+
+export const updateEpisodeProgressResponsePositionSecondsMin = 0;
+
+export const updateEpisodeProgressResponseDurationSecondsMin = 0;
+
+
+
+export const UpdateEpisodeProgressResponse = zod.object({
+  "titleId": zod.number().int(),
+  "episodeId": zod.number().int().nullable(),
+  "positionSeconds": zod.number().int().min(updateEpisodeProgressResponsePositionSecondsMin),
+  "durationSeconds": zod.number().int().min(updateEpisodeProgressResponseDurationSecondsMin).nullable(),
+  "completed": zod.boolean(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Get signed playback and download options for an owned episode
  */
 
