@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: var(--font-fraunces), "Iowan Old Style", serif;
+  --font-body: var(--font-inter), system-ui, sans-serif;
+
+  --color-ink: #12141c;
+  --color-panel: #181b26;
+  --color-panel-raised: #1f2333;
+  --color-paper: #f3eee2;
+  --color-paper-dim: #e7e0cf;
+  --color-text: #ede9e0;
+  --color-muted: #98a0b3;
+  --color-muted-dim: #6b7286;
+  --color-line: #2a2e3d;
+  --color-marquee: #c9a44c;
+  --color-marquee-dim: #8f7638;
+  --color-rose: #b5533c;
+  --color-rose-dim: #7d3a2a;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-ink);
+    color: var(--color-text);
+    font-family: var(--font-body);
+  }
+
+  ::selection {
+    background-color: var(--color-marquee);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-marquee);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .rule {
+    border-top: 1px solid var(--color-line);
+  }
+
+  .rule-b {
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .admin-input {
+    background-color: transparent;
+    border-bottom: 1px solid var(--color-line);
+    padding: 0.35rem 0;
+    font-size: 0.875rem;
+    color: var(--color-text);
+  }
+
+  .admin-input:focus {
+    outline: none;
+    border-color: var(--color-marquee);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
