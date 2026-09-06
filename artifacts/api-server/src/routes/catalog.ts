@@ -1,7 +1,7 @@
 import { createReadStream } from "node:fs";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { and, avg, count, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, arrayOverlaps, avg, count, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { Router, type IRouter, type Request } from "express";
 import {
   GetEpisodePlaybackOptionsParams,
@@ -339,7 +339,7 @@ router.get("/titles/:id/similar", async (req, res): Promise<void> => {
     .where(
       and(
         ne(catalogTitlesTable.id, title.id),
-        sql`${catalogTitlesTable.genres} && ${title.genres}`,
+        arrayOverlaps(catalogTitlesTable.genres, title.genres),
       ),
     )
     .orderBy(desc(catalogTitlesTable.rating), desc(catalogTitlesTable.viewCount))
