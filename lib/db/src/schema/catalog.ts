@@ -26,6 +26,7 @@ export const catalogTitlesTable = pgTable(
     genres: text("genres").array().notNull().default([]),
     rating: numeric("rating", { precision: 3, scale: 1 }),
     sourceUrl: text("source_url").notNull(),
+    viewCount: integer("view_count").notNull().default(0),
     lastSyncedAt: timestamp("last_synced_at", {
       withTimezone: true,
     }).notNull().defaultNow(),
@@ -33,6 +34,9 @@ export const catalogTitlesTable = pgTable(
   (table) => ({
     sourceUrlIndex: uniqueIndex("catalog_titles_source_url_idx").on(
       table.sourceUrl,
+    ),
+    viewCountIndex: index("catalog_titles_view_count_idx").on(
+      table.viewCount,
     ),
   }),
 );
@@ -86,6 +90,53 @@ export const watchProgressTable = pgTable(
       .on(table.userId, table.episodeId)
       .where(sql`${table.episodeId} is not null`),
     updatedAtIndex: index("watch_progress_updated_at_idx").on(table.userId, table.updatedAt),
+  }),
+);
+
+export const watchlistTable = pgTable(
+  "watchlist",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 }).notNull(),
+    titleId: integer("title_id")
+      .notNull()
+      .references(() => catalogTitlesTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    identityIndex: uniqueIndex("watchlist_identity_idx").on(
+      table.userId,
+      table.titleId,
+    ),
+    userIndex: index("watchlist_user_idx").on(table.userId, table.createdAt),
+  }),
+);
+
+export const titleRatingsTable = pgTable(
+  "title_ratings",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 }).notNull(),
+    titleId: integer("title_id")
+      .notNull()
+      .references(() => catalogTitlesTable.id, { onDelete: "cascade" }),
+    score: integer("score").notNull(),
+    review: text("review"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    identityIndex: uniqueIndex("title_ratings_identity_idx").on(
+      table.userId,
+      table.titleId,
+    ),
+    titleIndex: index("title_ratings_title_idx").on(table.titleId),
   }),
 );
 

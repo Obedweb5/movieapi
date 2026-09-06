@@ -14,6 +14,12 @@ tags:
     description: Public catalog metadata operations
   - name: progress
     description: Authenticated watch progress operations
+  - name: watchlist
+    description: Authenticated watchlist operations
+  - name: ratings
+    description: Title ratings and reviews
+  - name: admin
+    description: Admin catalog and media management operations
 paths:
   /healthz:
     get:
@@ -49,6 +55,17 @@ paths:
           schema:
             type: string
         - in: query
+          name: year
+          schema:
+            type: integer
+            minimum: 1870
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [newest, oldest, rating, popular, title]
+            default: newest
+        - in: query
           name: page
           schema:
             type: integer
@@ -68,6 +85,70 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TitleListResponse"
+  /titles/genres:
+    get:
+      operationId: listGenres
+      tags: [catalog]
+      summary: List distinct genres present in the catalog
+      responses:
+        "200":
+          description: Distinct genre list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenreListResponse"
+  /titles/trending:
+    get:
+      operationId: listTrendingTitles
+      tags: [catalog]
+      summary: List titles ranked by recent view activity
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: Trending titles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TitleSummary"
+  /titles/{id}/similar:
+    get:
+      operationId: listSimilarTitles
+      tags: [catalog]
+      summary: List titles that share genres with the given title
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 12
+      responses:
+        "200":
+          description: Similar titles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TitleSummary"
+        "404":
+          description: Title not found
   /titles/{id}:
     get:
       operationId: getTitle
@@ -226,6 +307,174 @@ paths:
           description: Authentication required
         "404":
           description: Episode not found
+  /me/continue-watching:
+    get:
+      operationId: listContinueWatching
+      tags: [progress]
+      summary: List the signed-in user's most recently watched, unfinished titles
+      security:
+        - clerkSession: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: Recently watched, incomplete progress records with title metadata
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContinueWatchingItem"
+        "401":
+          description: Authentication required
+  /me/watchlist:
+    get:
+      operationId: listWatchlist
+      tags: [watchlist]
+      summary: List the signed-in user's watchlist
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Watchlisted titles, most recently added first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TitleSummary"
+        "401":
+          description: Authentication required
+  /titles/{id}/watchlist:
+    post:
+      operationId: addToWatchlist
+      tags: [watchlist]
+      summary: Add a title to the signed-in user's watchlist
+      security:
+        - clerkSession: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "201":
+          description: Added to watchlist (or already present)
+        "401":
+          description: Authentication required
+        "404":
+          description: Title not found
+    delete:
+      operationId: removeFromWatchlist
+      tags: [watchlist]
+      summary: Remove a title from the signed-in user's watchlist
+      security:
+        - clerkSession: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "204":
+          description: Removed from watchlist
+        "401":
+          description: Authentication required
+  /titles/{id}/ratings:
+    get:
+      operationId: listTitleRatings
+      tags: [ratings]
+      summary: List ratings/reviews for a title, with the average score
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Rating summary and paginated reviews
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TitleRatingsResponse"
+        "404":
+          description: Title not found
+  /titles/{id}/rating:
+    put:
+      operationId: upsertTitleRating
+      tags: [ratings]
+      summary: Create or update the signed-in user's rating/review for a title
+      security:
+        - clerkSession: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RatingInput"
+      responses:
+        "200":
+          description: Saved rating
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rating"
+        "400":
+          description: Invalid rating
+        "401":
+          description: Authentication required
+        "404":
+          description: Title not found
+    delete:
+      operationId: deleteTitleRating
+      tags: [ratings]
+      summary: Delete the signed-in user's rating for a title
+      security:
+        - clerkSession: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "204":
+          description: Rating deleted
+        "401":
+          description: Authentication required
   /episodes/{episodeId}/playback:
     get:
       operationId: getEpisodePlaybackOptions
@@ -303,6 +552,43 @@ paths:
         "401":
           description: Invalid admin key
   /admin/media-ingestions:
+    get:
+      operationId: listMediaIngestions
+      tags: [admin]
+      summary: List media ingestion jobs
+      parameters:
+        - in: header
+          name: x-media-admin-key
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [queued, processing, completed, failed]
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Paginated media ingestion jobs, newest first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaIngestionJobListResponse"
+        "401":
+          description: Invalid admin key
     post:
       operationId: createMediaIngestion
       tags: [catalog]
@@ -360,6 +646,246 @@ paths:
           description: Invalid admin key
         "404":
           description: Job not found
+  /admin/titles:
+    post:
+      operationId: createTitle
+      tags: [admin]
+      summary: Manually create a catalog title
+      parameters:
+        - in: header
+          name: x-media-admin-key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TitleInput"
+      responses:
+        "201":
+          description: Created title
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TitleSummary"
+        "400":
+          description: Invalid title
+        "401":
+          description: Invalid admin key
+        "409":
+          description: A title with this sourceUrl already exists
+  /admin/titles/{id}:
+    put:
+      operationId: updateTitle
+      tags: [admin]
+      summary: Update a catalog title
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: header
+          name: x-media-admin-key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TitleUpdateInput"
+      responses:
+        "200":
+          description: Updated title
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TitleSummary"
+        "400":
+          description: Invalid update
+        "401":
+          description: Invalid admin key
+        "404":
+          description: Title not found
+    delete:
+      operationId: deleteTitle
+      tags: [admin]
+      summary: Delete a catalog title and its episodes, media, and progress
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: header
+          name: x-media-admin-key
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Title deleted
+        "401":
+          description: Invalid admin key
+        "404":
+          description: Title not found
+  /admin/titles/{id}/episodes:
+    post:
+      operationId: createEpisode
+      tags: [admin]
+      summary: Manually create an episode under a title
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: header
+          name: x-media-admin-key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EpisodeInput"
+      responses:
+        "201":
+          description: Created episode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Episode"
+        "400":
+          description: Invalid episode
+        "401":
+          description: Invalid admin key
+        "404":
+          description: Title not found
+        "409":
+          description: An episode with this season/episode number already exists
+  /admin/episodes/{episodeId}:
+    put:
+      operationId: updateEpisode
+      tags: [admin]
+      summary: Update an episode
+      parameters:
+        - in: path
+          name: episodeId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: header
+          name: x-media-admin-key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EpisodeUpdateInput"
+      responses:
+        "200":
+          description: Updated episode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Episode"
+        "400":
+          description: Invalid update
+        "401":
+          description: Invalid admin key
+        "404":
+          description: Episode not found
+    delete:
+      operationId: deleteEpisode
+      tags: [admin]
+      summary: Delete an episode and its media/progress
+      parameters:
+        - in: path
+          name: episodeId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: header
+          name: x-media-admin-key
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Episode deleted
+        "401":
+          description: Invalid admin key
+        "404":
+          description: Episode not found
+  /admin/media-assets/{assetId}:
+    delete:
+      operationId: deleteMediaAsset
+      tags: [admin]
+      summary: Delete a registered media asset record (does not delete the file on disk)
+      parameters:
+        - in: path
+          name: assetId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: header
+          name: x-media-admin-key
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Media asset deleted
+        "401":
+          description: Invalid admin key
+        "404":
+          description: Media asset not found
+  /admin/media-ingestions/{jobId}/retry:
+    post:
+      operationId: retryMediaIngestion
+      tags: [admin]
+      summary: Re-queue a failed media ingestion job
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: header
+          name: x-media-admin-key
+          required: true
+          schema:
+            type: string
+      responses:
+        "202":
+          description: Re-queued job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaIngestionJob"
+        "401":
+          description: Invalid admin key
+        "404":
+          description: Job not found
+        "409":
+          description: Job is not in a failed state
   /catalog/import:
     post:
       operationId: importCatalogMetadata
@@ -765,4 +1291,186 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SignedAsset"
+    GenreListResponse:
+      type: object
+      required: [genres]
+      properties:
+        genres:
+          type: array
+          items:
+            type: string
+    ContinueWatchingItem:
+      type: object
+      required: [title, progress]
+      properties:
+        title:
+          $ref: "#/components/schemas/TitleSummary"
+        progress:
+          $ref: "#/components/schemas/ProgressRecord"
+    RatingInput:
+      type: object
+      required: [score]
+      properties:
+        score:
+          type: integer
+          minimum: 1
+          maximum: 10
+        review:
+          type: ["string", "null"]
+          maxLength: 4000
+    Rating:
+      type: object
+      required: [id, titleId, score, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        titleId:
+          type: integer
+        score:
+          type: integer
+          minimum: 1
+          maximum: 10
+        review:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    TitleRatingsResponse:
+      type: object
+      required: [titleId, averageScore, ratingCount, items, page, pageSize, total, totalPages]
+      properties:
+        titleId:
+          type: integer
+        averageScore:
+          type: ["number", "null"]
+        ratingCount:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Rating"
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+    TitleInput:
+      type: object
+      required: [title, type, sourceUrl]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        type:
+          type: string
+          enum: [movie, series]
+        posterUrl:
+          type: ["string", "null"]
+          format: uri
+        synopsis:
+          type: ["string", "null"]
+        year:
+          type: ["integer", "null"]
+          minimum: 1870
+        genres:
+          type: array
+          items:
+            type: string
+          default: []
+        rating:
+          type: ["number", "null"]
+          minimum: 0
+          maximum: 10
+        sourceUrl:
+          type: string
+          minLength: 1
+    TitleUpdateInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        type:
+          type: string
+          enum: [movie, series]
+        posterUrl:
+          type: ["string", "null"]
+          format: uri
+        synopsis:
+          type: ["string", "null"]
+        year:
+          type: ["integer", "null"]
+          minimum: 1870
+        genres:
+          type: array
+          items:
+            type: string
+        rating:
+          type: ["number", "null"]
+          minimum: 0
+          maximum: 10
+    EpisodeInput:
+      type: object
+      required: [seasonNumber, episodeNumber, title, sourceUrl]
+      properties:
+        seasonNumber:
+          type: integer
+          minimum: 0
+        episodeNumber:
+          type: integer
+          minimum: 0
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        synopsis:
+          type: ["string", "null"]
+        airDate:
+          type: ["string", "null"]
+          format: date
+        sourceUrl:
+          type: string
+          minLength: 1
+    EpisodeUpdateInput:
+      type: object
+      properties:
+        seasonNumber:
+          type: integer
+          minimum: 0
+        episodeNumber:
+          type: integer
+          minimum: 0
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        synopsis:
+          type: ["string", "null"]
+        airDate:
+          type: ["string", "null"]
+          format: date
+    MediaIngestionJobListResponse:
+      type: object
+      required: [items, page, pageSize, total, totalPages]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MediaIngestionJob"
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
 

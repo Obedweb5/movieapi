@@ -20,6 +20,9 @@ export const HealthCheckResponse = zod.object({
 /**
  * @summary List public movie and series metadata
  */
+export const listTitlesQueryYearMin = 1870;
+
+export const listTitlesQuerySortDefault = `newest`;
 export const listTitlesQueryPageDefault = 1;
 
 export const listTitlesQueryPageSizeDefault = 24;
@@ -31,6 +34,8 @@ export const ListTitlesQueryParams = zod.object({
   "query": zod.coerce.string().optional().describe('Search titles and descriptions'),
   "type": zod.enum(['movie', 'series']).optional(),
   "genre": zod.coerce.string().optional(),
+  "year": zod.coerce.number().int().min(listTitlesQueryYearMin).optional(),
+  "sort": zod.enum(['newest', 'oldest', 'rating', 'popular', 'title']).default(listTitlesQuerySortDefault),
   "page": zod.coerce.number().int().min(1).default(listTitlesQueryPageDefault),
   "pageSize": zod.coerce.number().int().min(1).max(listTitlesQueryPageSizeMax).default(listTitlesQueryPageSizeDefault)
 })
@@ -53,6 +58,75 @@ export const ListTitlesResponse = zod.object({
   "total": zod.number().int(),
   "totalPages": zod.number().int()
 })
+
+
+/**
+ * @summary List distinct genres present in the catalog
+ */
+export const ListGenresResponse = zod.object({
+  "genres": zod.array(zod.string())
+})
+
+
+/**
+ * @summary List titles ranked by recent view activity
+ */
+export const listTrendingTitlesQueryLimitDefault = 20;
+export const listTrendingTitlesQueryLimitMax = 50;
+
+
+
+export const ListTrendingTitlesQueryParams = zod.object({
+  "limit": zod.coerce.number().int().min(1).max(listTrendingTitlesQueryLimitMax).default(listTrendingTitlesQueryLimitDefault)
+})
+
+export const ListTrendingTitlesResponseItem = zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "type": zod.enum(['movie', 'series']),
+  "posterUrl": zod.string().url().nullish(),
+  "synopsis": zod.string().nullish(),
+  "year": zod.number().int().nullish(),
+  "genres": zod.array(zod.string()),
+  "rating": zod.number().nullish(),
+  "sourceUrl": zod.string().url(),
+  "lastSyncedAt": zod.coerce.date()
+})
+export const ListTrendingTitlesResponse = zod.array(ListTrendingTitlesResponseItem)
+
+
+/**
+ * @summary List titles that share genres with the given title
+ */
+
+
+
+export const ListSimilarTitlesParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const listSimilarTitlesQueryLimitDefault = 12;
+export const listSimilarTitlesQueryLimitMax = 50;
+
+
+
+export const ListSimilarTitlesQueryParams = zod.object({
+  "limit": zod.coerce.number().int().min(1).max(listSimilarTitlesQueryLimitMax).default(listSimilarTitlesQueryLimitDefault)
+})
+
+export const ListSimilarTitlesResponseItem = zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "type": zod.enum(['movie', 'series']),
+  "posterUrl": zod.string().url().nullish(),
+  "synopsis": zod.string().nullish(),
+  "year": zod.number().int().nullish(),
+  "genres": zod.array(zod.string()),
+  "rating": zod.number().nullish(),
+  "sourceUrl": zod.string().url(),
+  "lastSyncedAt": zod.coerce.date()
+})
+export const ListSimilarTitlesResponse = zod.array(ListSimilarTitlesResponseItem)
 
 
 /**
@@ -291,6 +365,186 @@ export const UpdateEpisodeProgressResponse = zod.object({
 
 
 /**
+ * @summary List the signed-in user's most recently watched, unfinished titles
+ */
+export const listContinueWatchingQueryLimitDefault = 20;
+export const listContinueWatchingQueryLimitMax = 50;
+
+
+
+export const ListContinueWatchingQueryParams = zod.object({
+  "limit": zod.coerce.number().int().min(1).max(listContinueWatchingQueryLimitMax).default(listContinueWatchingQueryLimitDefault)
+})
+
+export const listContinueWatchingResponseProgressPositionSecondsMin = 0;
+
+export const listContinueWatchingResponseProgressDurationSecondsMin = 0;
+
+
+
+export const ListContinueWatchingResponseItem = zod.object({
+  "title": zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "type": zod.enum(['movie', 'series']),
+  "posterUrl": zod.string().url().nullish(),
+  "synopsis": zod.string().nullish(),
+  "year": zod.number().int().nullish(),
+  "genres": zod.array(zod.string()),
+  "rating": zod.number().nullish(),
+  "sourceUrl": zod.string().url(),
+  "lastSyncedAt": zod.coerce.date()
+}),
+  "progress": zod.object({
+  "titleId": zod.number().int(),
+  "episodeId": zod.number().int().nullable(),
+  "positionSeconds": zod.number().int().min(listContinueWatchingResponseProgressPositionSecondsMin),
+  "durationSeconds": zod.number().int().min(listContinueWatchingResponseProgressDurationSecondsMin).nullable(),
+  "completed": zod.boolean(),
+  "updatedAt": zod.coerce.date()
+})
+})
+export const ListContinueWatchingResponse = zod.array(ListContinueWatchingResponseItem)
+
+
+/**
+ * @summary List the signed-in user's watchlist
+ */
+export const ListWatchlistResponseItem = zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "type": zod.enum(['movie', 'series']),
+  "posterUrl": zod.string().url().nullish(),
+  "synopsis": zod.string().nullish(),
+  "year": zod.number().int().nullish(),
+  "genres": zod.array(zod.string()),
+  "rating": zod.number().nullish(),
+  "sourceUrl": zod.string().url(),
+  "lastSyncedAt": zod.coerce.date()
+})
+export const ListWatchlistResponse = zod.array(ListWatchlistResponseItem)
+
+
+/**
+ * @summary Add a title to the signed-in user's watchlist
+ */
+
+
+
+export const AddToWatchlistParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const AddToWatchlistResponse = zod.void()
+
+
+/**
+ * @summary Remove a title from the signed-in user's watchlist
+ */
+
+
+
+export const RemoveFromWatchlistParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const RemoveFromWatchlistResponse = zod.void()
+
+
+/**
+ * @summary List ratings/reviews for a title, with the average score
+ */
+
+
+
+export const ListTitleRatingsParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const listTitleRatingsQueryPageDefault = 1;
+
+export const listTitleRatingsQueryPageSizeDefault = 20;
+export const listTitleRatingsQueryPageSizeMax = 100;
+
+
+
+export const ListTitleRatingsQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).default(listTitleRatingsQueryPageDefault),
+  "pageSize": zod.coerce.number().int().min(1).max(listTitleRatingsQueryPageSizeMax).default(listTitleRatingsQueryPageSizeDefault)
+})
+
+export const listTitleRatingsResponseItemsItemScoreMax = 10;
+
+
+
+export const ListTitleRatingsResponse = zod.object({
+  "titleId": zod.number().int(),
+  "averageScore": zod.number().nullable(),
+  "ratingCount": zod.number().int(),
+  "items": zod.array(zod.object({
+  "id": zod.number().int(),
+  "titleId": zod.number().int(),
+  "score": zod.number().int().min(1).max(listTitleRatingsResponseItemsItemScoreMax),
+  "review": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "page": zod.number().int(),
+  "pageSize": zod.number().int(),
+  "total": zod.number().int(),
+  "totalPages": zod.number().int()
+})
+
+
+/**
+ * @summary Create or update the signed-in user's rating/review for a title
+ */
+
+
+
+export const UpsertTitleRatingParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const upsertTitleRatingBodyScoreMax = 10;
+
+export const upsertTitleRatingBodyReviewMax = 4000;
+
+
+
+export const UpsertTitleRatingBody = zod.object({
+  "score": zod.number().int().min(1).max(upsertTitleRatingBodyScoreMax),
+  "review": zod.string().max(upsertTitleRatingBodyReviewMax).nullish()
+})
+
+export const upsertTitleRatingResponseScoreMax = 10;
+
+
+
+export const UpsertTitleRatingResponse = zod.object({
+  "id": zod.number().int(),
+  "titleId": zod.number().int(),
+  "score": zod.number().int().min(1).max(upsertTitleRatingResponseScoreMax),
+  "review": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete the signed-in user's rating for a title
+ */
+
+
+
+export const DeleteTitleRatingParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const DeleteTitleRatingResponse = zod.void()
+
+
+/**
  * @summary Get signed playback and download options for an owned episode
  */
 
@@ -419,6 +673,74 @@ export const RegisterMediaAssetResponse = zod.object({
   "height": zod.number().int().nullish(),
   "bitrateKbps": zod.number().int().nullish(),
   "isDownloadable": zod.boolean()
+})
+
+
+/**
+ * @summary List media ingestion jobs
+ */
+export const listMediaIngestionsQueryPageDefault = 1;
+
+export const listMediaIngestionsQueryPageSizeDefault = 20;
+export const listMediaIngestionsQueryPageSizeMax = 100;
+
+
+
+export const ListMediaIngestionsQueryParams = zod.object({
+  "status": zod.enum(['queued', 'processing', 'completed', 'failed']).optional(),
+  "page": zod.coerce.number().int().min(1).default(listMediaIngestionsQueryPageDefault),
+  "pageSize": zod.coerce.number().int().min(1).max(listMediaIngestionsQueryPageSizeMax).default(listMediaIngestionsQueryPageSizeDefault)
+})
+
+export const ListMediaIngestionsHeader = zod.object({
+  "x-media-admin-key": zod.string()
+})
+
+export const listMediaIngestionsResponseItemsItemProgressMin = 0;
+export const listMediaIngestionsResponseItemsItemProgressMax = 100;
+
+export const listMediaIngestionsResponseItemsItemQualitiesItemLabelMax = 50;
+
+export const listMediaIngestionsResponseItemsItemQualitiesItemHeightMin = 144;
+export const listMediaIngestionsResponseItemsItemQualitiesItemHeightMax = 4320;
+
+export const listMediaIngestionsResponseItemsItemQualitiesItemBitrateKbpsMin = 100;
+export const listMediaIngestionsResponseItemsItemQualitiesItemBitrateKbpsMax = 50000;
+
+
+export const listMediaIngestionsResponseItemsItemSubtitlesItemLabelMax = 50;
+
+export const listMediaIngestionsResponseItemsItemSubtitlesItemLanguageRegExp = new RegExp('^[a-z]{2,3}(?:-[A-Z]{2})?$');
+
+
+export const ListMediaIngestionsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number().int(),
+  "titleId": zod.number().int(),
+  "episodeId": zod.number().int().nullish(),
+  "sourceRelativePath": zod.string(),
+  "status": zod.enum(['queued', 'processing', 'completed', 'failed']),
+  "progress": zod.number().int().min(listMediaIngestionsResponseItemsItemProgressMin).max(listMediaIngestionsResponseItemsItemProgressMax),
+  "qualities": zod.array(zod.object({
+  "label": zod.string().min(1).max(listMediaIngestionsResponseItemsItemQualitiesItemLabelMax),
+  "height": zod.number().int().min(listMediaIngestionsResponseItemsItemQualitiesItemHeightMin).max(listMediaIngestionsResponseItemsItemQualitiesItemHeightMax),
+  "bitrateKbps": zod.number().int().min(listMediaIngestionsResponseItemsItemQualitiesItemBitrateKbpsMin).max(listMediaIngestionsResponseItemsItemQualitiesItemBitrateKbpsMax)
+})),
+  "subtitles": zod.array(zod.object({
+  "relativePath": zod.string().min(1),
+  "label": zod.string().min(1).max(listMediaIngestionsResponseItemsItemSubtitlesItemLabelMax),
+  "language": zod.string().regex(listMediaIngestionsResponseItemsItemSubtitlesItemLanguageRegExp).optional()
+})),
+  "includeDownloads": zod.boolean(),
+  "error": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "startedAt": zod.coerce.date().nullish(),
+  "completedAt": zod.coerce.date().nullish()
+})),
+  "page": zod.number().int(),
+  "pageSize": zod.number().int(),
+  "total": zod.number().int(),
+  "totalPages": zod.number().int()
 })
 
 
@@ -556,6 +878,289 @@ export const GetMediaIngestionResponse = zod.object({
   "relativePath": zod.string().min(1),
   "label": zod.string().min(1).max(getMediaIngestionResponseSubtitlesItemLabelMax),
   "language": zod.string().regex(getMediaIngestionResponseSubtitlesItemLanguageRegExp).optional()
+})),
+  "includeDownloads": zod.boolean(),
+  "error": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "startedAt": zod.coerce.date().nullish(),
+  "completedAt": zod.coerce.date().nullish()
+})
+
+
+/**
+ * @summary Manually create a catalog title
+ */
+export const CreateTitleHeader = zod.object({
+  "x-media-admin-key": zod.string()
+})
+
+export const createTitleBodyTitleMax = 300;
+
+export const createTitleBodyYearMin = 1870;
+
+export const createTitleBodyGenresDefault = [];
+export const createTitleBodyRatingMin = 0;
+export const createTitleBodyRatingMax = 10;
+
+
+
+
+export const CreateTitleBody = zod.object({
+  "title": zod.string().min(1).max(createTitleBodyTitleMax),
+  "type": zod.enum(['movie', 'series']),
+  "posterUrl": zod.string().url().nullish(),
+  "synopsis": zod.string().nullish(),
+  "year": zod.number().int().min(createTitleBodyYearMin).nullish(),
+  "genres": zod.array(zod.string()).default(createTitleBodyGenresDefault),
+  "rating": zod.number().min(createTitleBodyRatingMin).max(createTitleBodyRatingMax).nullish(),
+  "sourceUrl": zod.string().min(1)
+})
+
+export const CreateTitleResponse = zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "type": zod.enum(['movie', 'series']),
+  "posterUrl": zod.string().url().nullish(),
+  "synopsis": zod.string().nullish(),
+  "year": zod.number().int().nullish(),
+  "genres": zod.array(zod.string()),
+  "rating": zod.number().nullish(),
+  "sourceUrl": zod.string().url(),
+  "lastSyncedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a catalog title
+ */
+
+
+
+export const UpdateTitleParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const UpdateTitleHeader = zod.object({
+  "x-media-admin-key": zod.string()
+})
+
+export const updateTitleBodyTitleMax = 300;
+
+export const updateTitleBodyYearMin = 1870;
+
+export const updateTitleBodyRatingMin = 0;
+export const updateTitleBodyRatingMax = 10;
+
+
+
+export const UpdateTitleBody = zod.object({
+  "title": zod.string().min(1).max(updateTitleBodyTitleMax).optional(),
+  "type": zod.enum(['movie', 'series']).optional(),
+  "posterUrl": zod.string().url().nullish(),
+  "synopsis": zod.string().nullish(),
+  "year": zod.number().int().min(updateTitleBodyYearMin).nullish(),
+  "genres": zod.array(zod.string()).optional(),
+  "rating": zod.number().min(updateTitleBodyRatingMin).max(updateTitleBodyRatingMax).nullish()
+})
+
+export const UpdateTitleResponse = zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "type": zod.enum(['movie', 'series']),
+  "posterUrl": zod.string().url().nullish(),
+  "synopsis": zod.string().nullish(),
+  "year": zod.number().int().nullish(),
+  "genres": zod.array(zod.string()),
+  "rating": zod.number().nullish(),
+  "sourceUrl": zod.string().url(),
+  "lastSyncedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a catalog title and its episodes, media, and progress
+ */
+
+
+
+export const DeleteTitleParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const DeleteTitleHeader = zod.object({
+  "x-media-admin-key": zod.string()
+})
+
+export const DeleteTitleResponse = zod.void()
+
+
+/**
+ * @summary Manually create an episode under a title
+ */
+
+
+
+export const CreateEpisodeParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const CreateEpisodeHeader = zod.object({
+  "x-media-admin-key": zod.string()
+})
+
+export const createEpisodeBodySeasonNumberMin = 0;
+
+export const createEpisodeBodyEpisodeNumberMin = 0;
+
+export const createEpisodeBodyTitleMax = 300;
+
+
+
+
+export const CreateEpisodeBody = zod.object({
+  "seasonNumber": zod.number().int().min(createEpisodeBodySeasonNumberMin),
+  "episodeNumber": zod.number().int().min(createEpisodeBodyEpisodeNumberMin),
+  "title": zod.string().min(1).max(createEpisodeBodyTitleMax),
+  "synopsis": zod.string().nullish(),
+  "airDate": zod.coerce.date().nullish(),
+  "sourceUrl": zod.string().min(1)
+})
+
+export const CreateEpisodeResponse = zod.object({
+  "id": zod.number().int(),
+  "titleId": zod.number().int(),
+  "seasonNumber": zod.number().int(),
+  "episodeNumber": zod.number().int(),
+  "title": zod.string(),
+  "synopsis": zod.string().nullish(),
+  "airDate": zod.coerce.date().nullish(),
+  "sourceUrl": zod.string().url()
+})
+
+
+/**
+ * @summary Update an episode
+ */
+
+
+
+export const UpdateEpisodeParams = zod.object({
+  "episodeId": zod.coerce.number().int().min(1)
+})
+
+export const UpdateEpisodeHeader = zod.object({
+  "x-media-admin-key": zod.string()
+})
+
+export const updateEpisodeBodySeasonNumberMin = 0;
+
+export const updateEpisodeBodyEpisodeNumberMin = 0;
+
+export const updateEpisodeBodyTitleMax = 300;
+
+
+
+export const UpdateEpisodeBody = zod.object({
+  "seasonNumber": zod.number().int().min(updateEpisodeBodySeasonNumberMin).optional(),
+  "episodeNumber": zod.number().int().min(updateEpisodeBodyEpisodeNumberMin).optional(),
+  "title": zod.string().min(1).max(updateEpisodeBodyTitleMax).optional(),
+  "synopsis": zod.string().nullish(),
+  "airDate": zod.coerce.date().nullish()
+})
+
+export const UpdateEpisodeResponse = zod.object({
+  "id": zod.number().int(),
+  "titleId": zod.number().int(),
+  "seasonNumber": zod.number().int(),
+  "episodeNumber": zod.number().int(),
+  "title": zod.string(),
+  "synopsis": zod.string().nullish(),
+  "airDate": zod.coerce.date().nullish(),
+  "sourceUrl": zod.string().url()
+})
+
+
+/**
+ * @summary Delete an episode and its media/progress
+ */
+
+
+
+export const DeleteEpisodeParams = zod.object({
+  "episodeId": zod.coerce.number().int().min(1)
+})
+
+export const DeleteEpisodeHeader = zod.object({
+  "x-media-admin-key": zod.string()
+})
+
+export const DeleteEpisodeResponse = zod.void()
+
+
+/**
+ * @summary Delete a registered media asset record (does not delete the file on disk)
+ */
+
+
+
+export const DeleteMediaAssetParams = zod.object({
+  "assetId": zod.coerce.number().int().min(1)
+})
+
+export const DeleteMediaAssetHeader = zod.object({
+  "x-media-admin-key": zod.string()
+})
+
+export const DeleteMediaAssetResponse = zod.void()
+
+
+/**
+ * @summary Re-queue a failed media ingestion job
+ */
+
+
+
+export const RetryMediaIngestionParams = zod.object({
+  "jobId": zod.coerce.number().int().min(1)
+})
+
+export const RetryMediaIngestionHeader = zod.object({
+  "x-media-admin-key": zod.string()
+})
+
+export const retryMediaIngestionResponseProgressMin = 0;
+export const retryMediaIngestionResponseProgressMax = 100;
+
+export const retryMediaIngestionResponseQualitiesItemLabelMax = 50;
+
+export const retryMediaIngestionResponseQualitiesItemHeightMin = 144;
+export const retryMediaIngestionResponseQualitiesItemHeightMax = 4320;
+
+export const retryMediaIngestionResponseQualitiesItemBitrateKbpsMin = 100;
+export const retryMediaIngestionResponseQualitiesItemBitrateKbpsMax = 50000;
+
+
+export const retryMediaIngestionResponseSubtitlesItemLabelMax = 50;
+
+export const retryMediaIngestionResponseSubtitlesItemLanguageRegExp = new RegExp('^[a-z]{2,3}(?:-[A-Z]{2})?$');
+
+
+export const RetryMediaIngestionResponse = zod.object({
+  "id": zod.number().int(),
+  "titleId": zod.number().int(),
+  "episodeId": zod.number().int().nullish(),
+  "sourceRelativePath": zod.string(),
+  "status": zod.enum(['queued', 'processing', 'completed', 'failed']),
+  "progress": zod.number().int().min(retryMediaIngestionResponseProgressMin).max(retryMediaIngestionResponseProgressMax),
+  "qualities": zod.array(zod.object({
+  "label": zod.string().min(1).max(retryMediaIngestionResponseQualitiesItemLabelMax),
+  "height": zod.number().int().min(retryMediaIngestionResponseQualitiesItemHeightMin).max(retryMediaIngestionResponseQualitiesItemHeightMax),
+  "bitrateKbps": zod.number().int().min(retryMediaIngestionResponseQualitiesItemBitrateKbpsMin).max(retryMediaIngestionResponseQualitiesItemBitrateKbpsMax)
+})),
+  "subtitles": zod.array(zod.object({
+  "relativePath": zod.string().min(1),
+  "label": zod.string().min(1).max(retryMediaIngestionResponseSubtitlesItemLabelMax),
+  "language": zod.string().regex(retryMediaIngestionResponseSubtitlesItemLanguageRegExp).optional()
 })),
   "includeDownloads": zod.boolean(),
   "error": zod.string().nullish(),

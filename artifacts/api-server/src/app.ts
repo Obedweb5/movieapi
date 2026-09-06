@@ -6,6 +6,7 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { resumeMediaIngestionQueue } from "./lib/media-transcoding";
+import { rateLimit } from "./middlewares/rateLimit";
 import {
   CLERK_PROXY_PATH,
   clerkProxyMiddleware,
@@ -46,7 +47,11 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use("/api", router);
+app.use(
+  "/api",
+  rateLimit({ windowMs: 60_000, max: 120 }),
+  router,
+);
 
 void resumeMediaIngestionQueue().catch((error) => {
   logger.error({ err: error }, "Unable to resume media ingestion queue");

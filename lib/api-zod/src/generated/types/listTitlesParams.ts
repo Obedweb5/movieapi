@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ListTitlesSort } from './listTitlesSort';
 import type { ListTitlesType } from './listTitlesType';
 
 export type ListTitlesParams = {
@@ -14,6 +15,11 @@ export type ListTitlesParams = {
 query?: string;
 type?: ListTitlesType;
 genre?: string;
+/**
+ * @minimum 1870
+ */
+year?: number;
+sort?: ListTitlesSort;
 /**
  * @minimum 1
  */

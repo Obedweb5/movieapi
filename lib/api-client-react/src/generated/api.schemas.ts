@@ -313,6 +313,164 @@ export interface PlaybackOptions {
   subtitles: SignedAsset[];
 }
 
+export interface GenreListResponse {
+  genres: string[];
+}
+
+export interface ContinueWatchingItem {
+  title: TitleSummary;
+  progress: ProgressRecord;
+}
+
+export interface RatingInput {
+  /**
+     * @minimum 1
+     * @maximum 10
+     */
+  score: number;
+  /**
+     * @maxLength 4000
+     * @nullable
+     */
+  review?: string | null;
+}
+
+export interface Rating {
+  id: number;
+  titleId: number;
+  /**
+     * @minimum 1
+     * @maximum 10
+     */
+  score: number;
+  /** @nullable */
+  review?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TitleRatingsResponse {
+  titleId: number;
+  /** @nullable */
+  averageScore: number | null;
+  ratingCount: number;
+  items: Rating[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export type TitleInputType = typeof TitleInputType[keyof typeof TitleInputType];
+
+
+export const TitleInputType = {
+  movie: 'movie',
+  series: 'series',
+} as const;
+
+export interface TitleInput {
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  title: string;
+  type: TitleInputType;
+  /** @nullable */
+  posterUrl?: string | null;
+  /** @nullable */
+  synopsis?: string | null;
+  /**
+     * @minimum 1870
+     * @nullable
+     */
+  year?: number | null;
+  genres?: string[];
+  /**
+     * @minimum 0
+     * @maximum 10
+     * @nullable
+     */
+  rating?: number | null;
+  /** @minLength 1 */
+  sourceUrl: string;
+}
+
+export type TitleUpdateInputType = typeof TitleUpdateInputType[keyof typeof TitleUpdateInputType];
+
+
+export const TitleUpdateInputType = {
+  movie: 'movie',
+  series: 'series',
+} as const;
+
+export interface TitleUpdateInput {
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  title?: string;
+  type?: TitleUpdateInputType;
+  /** @nullable */
+  posterUrl?: string | null;
+  /** @nullable */
+  synopsis?: string | null;
+  /**
+     * @minimum 1870
+     * @nullable
+     */
+  year?: number | null;
+  genres?: string[];
+  /**
+     * @minimum 0
+     * @maximum 10
+     * @nullable
+     */
+  rating?: number | null;
+}
+
+export interface EpisodeInput {
+  /** @minimum 0 */
+  seasonNumber: number;
+  /** @minimum 0 */
+  episodeNumber: number;
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  title: string;
+  /** @nullable */
+  synopsis?: string | null;
+  /** @nullable */
+  airDate?: string | null;
+  /** @minLength 1 */
+  sourceUrl: string;
+}
+
+export interface EpisodeUpdateInput {
+  /** @minimum 0 */
+  seasonNumber?: number;
+  /** @minimum 0 */
+  episodeNumber?: number;
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  title?: string;
+  /** @nullable */
+  synopsis?: string | null;
+  /** @nullable */
+  airDate?: string | null;
+}
+
+export interface MediaIngestionJobListResponse {
+  items: MediaIngestionJob[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
 export type ListTitlesParams = {
 /**
  * Search titles and descriptions
@@ -320,6 +478,11 @@ export type ListTitlesParams = {
 query?: string;
 type?: ListTitlesType;
 genre?: string;
+/**
+ * @minimum 1870
+ */
+year?: number;
+sort?: ListTitlesSort;
 /**
  * @minimum 1
  */
@@ -337,5 +500,75 @@ export type ListTitlesType = typeof ListTitlesType[keyof typeof ListTitlesType];
 export const ListTitlesType = {
   movie: 'movie',
   series: 'series',
+} as const;
+
+export type ListTitlesSort = typeof ListTitlesSort[keyof typeof ListTitlesSort];
+
+
+export const ListTitlesSort = {
+  newest: 'newest',
+  oldest: 'oldest',
+  rating: 'rating',
+  popular: 'popular',
+  title: 'title',
+} as const;
+
+export type ListTrendingTitlesParams = {
+/**
+ * @minimum 1
+ * @maximum 50
+ */
+limit?: number;
+};
+
+export type ListSimilarTitlesParams = {
+/**
+ * @minimum 1
+ * @maximum 50
+ */
+limit?: number;
+};
+
+export type ListContinueWatchingParams = {
+/**
+ * @minimum 1
+ * @maximum 50
+ */
+limit?: number;
+};
+
+export type ListTitleRatingsParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: number;
+};
+
+export type ListMediaIngestionsParams = {
+status?: ListMediaIngestionsStatus;
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: number;
+};
+
+export type ListMediaIngestionsStatus = typeof ListMediaIngestionsStatus[keyof typeof ListMediaIngestionsStatus];
+
+
+export const ListMediaIngestionsStatus = {
+  queued: 'queued',
+  processing: 'processing',
+  completed: 'completed',
+  failed: 'failed',
 } as const;
 

@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { asc, eq, or } from "drizzle-orm";
+import { and, asc, desc, eq, or } from "drizzle-orm";
 import {
   db,
   mediaAssetsTable,
@@ -592,4 +592,44 @@ export async function getMediaIngestionJob(jobId: number) {
     .where(eq(mediaIngestionJobsTable.id, jobId))
     .limit(1);
   return job ?? null;
+}
+
+export async function listMediaIngestionJobs(input: {
+  status?: "queued" | "processing" | "completed" | "failed";
+  page: number;
+  pageSize: number;
+}) {
+  const filters = input.status
+    ? [eq(mediaIngestionJobsTable.status, input.status)]
+    : [];
+  const rows = await db
+    .select()
+    .from(mediaIngestionJobsTable)
+    .where(filters.length ? and(...filters) : undefined)
+    .orderBy(desc(mediaIngestionJobsTable.createdAt));
+  const total = rows.length;
+  const start = (input.page - 1) * input.pageSize;
+  const items = rows.slice(start, start + input.pageSize);
+  return { items, total };
+}
+
+export async function retryMediaIngestionJob(jobId: number) {
+  const job = await getMediaIngestionJob(jobId);
+  if (!job) return { kind: "not-found" as const };
+  if (job.status !== "failed") return { kind: "not-failed" as const };
+
+  const [updated] = await db
+    .update(mediaIngestionJobsTable)
+    .set({
+      status: "queued",
+      progress: 0,
+      error: null,
+      startedAt: null,
+      completedAt: null,
+    })
+    .where(eq(mediaIngestionJobsTable.id, jobId))
+    .returning();
+  if (!updated) return { kind: "not-found" as const };
+  scheduleDrain();
+  return { kind: "ok" as const, job: updated };
 }
